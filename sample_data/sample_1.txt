@@ -1,0 +1,226 @@
+
+
+Vehicle: 	Honda City 1.5 SVMT (2015) 	Eicher 1095XP (2017)
+Database: 	      DB_DSD 	      DB_DSD
+RecordID: 	       77911 	        2102
+
+
+START VALUES
+
+Velocity magnitude (v) [km/h]: 	109.00 	0.00
+Heading angle [deg]: 	-173.18 	-173.47
+Velocity direction (�) [deg]: 	-173.18 	-173.47
+Yaw velocity [rad/s]: 	0.00 	0.00
+Center of gravity x [m]: 	-2.60 	-48.41
+Center of gravity y [m]: 	-7.62 	-10.25
+Center of gravity z [m]: 	0.50 	0.60
+Velocity vertical [km/h]: 	0.00 	0.00
+Roll angle [deg]: 	-0.00 	0.00
+Pitch angle [deg]: 	0.00 	0.00
+Roll velocity [rad/s]: 	0.00 	0.00
+Pitch velocity [rad/s]: 	0.00 	0.00
+
+
+END VALUES
+
+Velocity magnitude (v) [km/h]: 	109.00 	0.00
+Heading angle [deg]: 	-173.18 	-173.47
+Velocity direction (�) [deg]: 	-173.18 	-173.47
+Yaw velocity [rad/s]: 	0.00 	0.00
+Center of gravity x [m]: 	-2.60 	-48.41
+Center of gravity y [m]: 	-7.62 	-10.25
+Center of gravity z [m]: 	0.50 	0.60
+Velocity vertical [km/h]: 	0.00 	0.00
+Roll angle [deg]: 	-0.00 	0.00
+Pitch angle [deg]: 	0.00 	0.00
+Roll velocity [rad/s]: 	0.00 	0.00
+Pitch velocity [rad/s]: 	0.00 	0.00
+Vehicle: 	   Barricade 	            
+Database: 	      DB_DSD 	            
+RecordID: 	        1102 	            
+
+
+START VALUES
+
+Velocity magnitude (v) [km/h]: 	0.00
+Heading angle [deg]: 	-89.38
+Velocity direction (�) [deg]: 	-89.38
+Yaw velocity [rad/s]: 	0.00
+Center of gravity x [m]: 	34.94
+Center of gravity y [m]: 	-2.08
+Center of gravity z [m]: 	0.50
+Velocity vertical [km/h]: 	0.00
+Roll angle [deg]: 	0.00
+Pitch angle [deg]: 	0.00
+Roll velocity [rad/s]: 	0.00
+Pitch velocity [rad/s]: 	0.00
+
+
+END VALUES
+
+Velocity magnitude (v) [km/h]: 	0.00
+Heading angle [deg]: 	-89.38
+Velocity direction (�) [deg]: 	-89.38
+Yaw velocity [rad/s]: 	0.00
+Center of gravity x [m]: 	34.94
+Center of gravity y [m]: 	-2.08
+Center of gravity z [m]: 	0.50
+Velocity vertical [km/h]: 	0.00
+Roll angle [deg]: 	0.00
+Pitch angle [deg]: 	0.00
+Roll velocity [rad/s]: 	0.00
+Pitch velocity [rad/s]: 	0.00
+
+
+SEQUENCES
+
+
+1  Honda City: 	
+
+START VALUES
+Velocity [km/h]: 	109.00
+Friction coefficient: 	0.80
+
+BRAKE
+maximum stopping time [s]: 	0.50
+Brake force [%]
+  Axle 1, left: 	0.00
+  Axle 1, right: 	0.00
+  Axle 2, left: 	0.00
+  Axle 2, right: 	0.00
+Specified brake acceleration [m/s�]: 	-0.00
+
+STEERING
+Steering time [s]: 	0.50
+
+New steering angle [deg]  Axle 1: 	-4.40
+  Axle 2: 	0.00
+Turning circle [m]: 	-67.78
+
+BRAKE
+maximum stopping time [s]: 	2.00
+Brake force [%]
+  Axle 1, left: 	64.94
+  Axle 1, right: 	64.94
+  Axle 2, left: 	38.43
+  Axle 2, right: 	38.43
+Specified brake acceleration [m/s�]: 	-5.06
+
+STEERING
+Steering time [s]: 	0.60
+
+New steering angle [deg]  Axle 1: 	-2.10
+  Axle 2: 	0.00
+Turning circle [m]: 	-141.91
+
+
+2  Eicher 109: 	
+
+START VALUES
+Velocity [km/h]: 	0.00
+Friction coefficient: 	0.80
+
+BRAKE
+maximum stopping time [s]: 	5.00
+Brake force [%]
+  Axle 1, left: 	10.00
+  Axle 1, right: 	10.00
+  Axle 2, left: 	0.00
+  Axle 2, right: 	0.00
+Specified brake acceleration [m/s�]: 	-0.59
+
+
+3  Barricade: 	
+
+START VALUES
+Velocity [km/h]: 	0.00
+Friction coefficient: 	0.80
+
+
+INPUT VALUES
+
+
+Vehicle: 	Honda City 1.5 SVMT (2015) 	Eicher 1095XP (2017)
+Database: 	      DB_DSD 	      DB_DSD
+RecordID: 	       77911 	        2102
+Length [m]: 	4.44 	8.46
+Width [m]: 	1.70 	2.30
+Height [m]: 	1.50 	2.54
+Number of axles: 	2 	2
+Wheelbase [m]: 	2.60 	4.76
+Front overhang [m]: 	0.89 	1.10
+Front track width [m]: 	1.46 	1.70
+Rear track width [m]: 	1.46 	1.80
+Mass (empty) [kg]: 	1041.00 	3040.00
+Total weight [kg]: 	1361.00 	3040.00
+Mass of front occupants [kg]: 	160.00 	0.00
+Mass of rear occupants [kg]: 	160.00 	0.00
+Mass of cargo in trunk [kg]: 	0.00 	0.00
+Mass of roof cargo [kg]: 	0.00 	0.00
+Distance C.G. - front axle [m]: 	1.30 	1.90
+	(1.32) 	(1.90)
+C.G. height above ground [m]: 	0.50 	0.60
+	(0.50) 	(0.60)
+Roll moment of inertia [kgm^2]: 	457.50 	2680.27
+	(565.07) 	(2680.27)
+Pitch moment of inertia [kgm^2]: 	1525.00 	19471.61
+	(1883.55) 	(19471.61)
+Yaw moment of inertia [kgm^2]: 	1525.00 	19471.61
+	(1883.55) 	(19471.61)
+Stiffness, axle 1, left [N/m]: 	19743.61 	59769.97
+Stiffness, axle 1, right [N/m]: 	19743.61 	59769.97
+Stiffness, axle 2, left [N/m]: 	14297.09 	39638.03
+Stiffness, axle 2, right [N/m]: 	14297.09 	39638.03
+Damping, axle 1, left [Ns/m]: 	2221.16 	6724.12
+Damping, axle 1, right [Ns/m]: 	2221.16 	6724.12
+Damping, axle 2, left [Ns/m]: 	1608.42 	4459.28
+Damping, axle 2, right [Ns/m]: 	1608.42 	4459.28
+Max. slip angle,axle 1, left [deg]: 	10.00 	10.00
+Max. slip angle,axle 1, right [deg]: 	10.00 	10.00
+Max. slip angle,axle 2, left [deg]: 	10.00 	10.00
+Max. slip angle,axle 2, right [deg]: 	10.00 	10.00
+ABS: 	0.10 	No
+
+
+INPUT VALUES
+
+
+Vehicle: 	   Barricade 	            
+Database: 	      DB_DSD 	            
+RecordID: 	        1102 	            
+Length [m]: 	1.84
+Width [m]: 	0.65
+Height [m]: 	1.21
+Number of axles: 	2
+Wheelbase [m]: 	1.00
+Front overhang [m]: 	0.10
+Front track width [m]: 	1.32
+Rear track width [m]: 	1.32
+Mass (empty) [kg]: 	40.00
+Total weight [kg]: 	40.00
+Mass of front occupants [kg]: 	0.00
+Mass of rear occupants [kg]: 	0.00
+Mass of cargo in trunk [kg]: 	0.00
+Mass of roof cargo [kg]: 	0.00
+Distance C.G. - front axle [m]: 	0.20
+C.G. height above ground [m]: 	0.50
+Roll moment of inertia [kgm^2]: 	2.82
+Pitch moment of inertia [kgm^2]: 	12.69
+Yaw moment of inertia [kgm^2]: 	12.69
+Stiffness, axle 1, left [N/m]: 	654.00
+Stiffness, axle 1, right [N/m]: 	654.00
+Stiffness, axle 2, left [N/m]: 	654.00
+Stiffness, axle 2, right [N/m]: 	654.00
+Damping, axle 1, left [Ns/m]: 	73.58
+Damping, axle 1, right [Ns/m]: 	73.58
+Damping, axle 2, left [Ns/m]: 	73.58
+Damping, axle 2, right [Ns/m]: 	73.58
+Max. slip angle,axle 1, left [deg]: 	10.00
+Max. slip angle,axle 1, right [deg]: 	10.00
+Max. slip angle,axle 2, left [deg]: 	10.00
+Max. slip angle,axle 2, right [deg]: 	10.00
+ABS: 	No 	 
+
+
+
+Characters: 5783

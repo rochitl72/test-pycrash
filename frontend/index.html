@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CrashRecon</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap">
+<style>
+:root{--bg:#0c0e14;--bg-card:#141722;--bg-card-hover:#1a1e2e;--border:#1e2235;--border-accent:#2a3050;--fg:#e0e4ef;--fg-dim:#7a8199;--fg-muted:#4a5068;--accent:#3b82f6;--accent-glow:rgba(59,130,246,.15);--success:#22c55e;--success-dim:rgba(34,197,94,.12);--warning:#f59e0b;--warning-dim:rgba(245,158,11,.12);--danger:#ef4444;--danger-dim:rgba(239,68,68,.12);--veh1:#3b82f6;--veh2:#ef4444;--radius:10px;--radius-sm:6px;color-scheme:dark}
+@media(prefers-color-scheme:light){:root:not([data-theme="dark"]){--bg:#f4f5f8;--bg-card:#fff;--bg-card-hover:#f0f1f5;--border:#dde0ea;--border-accent:#c5c9d8;--fg:#1a1d2b;--fg-dim:#5c6180;--fg-muted:#9298b0;--accent:#2563eb;--accent-glow:rgba(37,99,235,.08);--success:#16a34a;--success-dim:rgba(22,163,74,.08);--warning:#d97706;--warning-dim:rgba(217,119,6,.08);--danger:#dc2626;--danger-dim:rgba(220,38,38,.08);--veh1:#2563eb;--veh2:#dc2626;color-scheme:light}}
+:root[data-theme="light"]{--bg:#f4f5f8;--bg-card:#fff;--bg-card-hover:#f0f1f5;--border:#dde0ea;--border-accent:#c5c9d8;--fg:#1a1d2b;--fg-dim:#5c6180;--fg-muted:#9298b0;--accent:#2563eb;--accent-glow:rgba(37,99,235,.08);--success:#16a34a;--success-dim:rgba(22,163,74,.08);--warning:#d97706;--warning-dim:rgba(217,119,6,.08);--danger:#dc2626;--danger-dim:rgba(220,38,38,.08);--veh1:#2563eb;--veh2:#dc2626;color-scheme:light}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--fg);line-height:1.6;min-height:100vh}
+h1,h2,h3,h4{font-family:'Space Grotesk','Inter',sans-serif;line-height:1.2}
+.app-header{border-bottom:1px solid var(--border);padding:16px 24px;display:flex;align-items:center;gap:16px;position:sticky;top:0;background:var(--bg);z-index:100}
+.app-header .logo{font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:700;color:var(--accent);letter-spacing:-.5px}
+.app-header .logo span{color:var(--fg)}
+.app-header .badge{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:1px;padding:3px 8px;border-radius:4px;background:var(--accent-glow);color:var(--accent);border:1px solid var(--accent)}
+.status-dots{margin-left:auto;display:flex;gap:12px;font-size:12px;color:var(--fg-dim)}
+.status-dots .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px;vertical-align:middle}
+.dot-ok{background:var(--success)}.dot-warn{background:var(--warning)}.dot-off{background:var(--fg-muted)}
+.container{max-width:1280px;margin:0 auto;padding:24px}
+.steps-bar{display:flex;gap:4px;margin-bottom:28px}
+.step-item{flex:1;display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:var(--radius-sm);font-size:13px;font-weight:500;color:var(--fg-muted);background:transparent;border:1px solid var(--border);transition:all .2s}
+.step-item.active{color:var(--accent);background:var(--accent-glow);border-color:var(--accent)}
+.step-item.done{color:var(--success);border-color:var(--success);background:var(--success-dim)}
+.step-num{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;background:var(--border);color:var(--fg-dim);flex-shrink:0}
+.step-item.active .step-num{background:var(--accent);color:#fff}
+.step-item.done .step-num{background:var(--success);color:#fff}
+.card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;margin-bottom:20px}
+.card-title{font-size:15px;font-weight:600;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.upload-zone{border:2px dashed var(--border-accent);border-radius:var(--radius);padding:48px 24px;text-align:center;cursor:pointer;transition:all .2s;position:relative}
+.upload-zone:hover,.upload-zone.dragover{border-color:var(--accent);background:var(--accent-glow)}
+.upload-zone input{display:none}
+.upload-icon{font-size:40px;margin-bottom:12px;opacity:.5}
+.upload-zone h3{font-size:16px;margin-bottom:6px;color:var(--fg)}
+.upload-zone p{font-size:13px;color:var(--fg-dim)}
+.upload-zone .sample-btn{display:inline-block;margin-top:16px;padding:8px 18px;border-radius:var(--radius-sm);border:1px solid var(--border-accent);background:var(--bg);color:var(--accent);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s}
+.upload-zone .sample-btn:hover{background:var(--accent);color:#fff;border-color:var(--accent)}
+.btn{padding:10px 20px;border-radius:var(--radius-sm);font-size:13px;font-weight:600;font-family:inherit;border:none;cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;gap:6px}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{filter:brightness(1.1)}
+.btn-primary:disabled{opacity:.4;cursor:not-allowed;filter:none}
+.btn-secondary{background:var(--bg);color:var(--fg);border:1px solid var(--border-accent)}
+.btn-secondary:hover{background:var(--bg-card-hover)}
+.scene-text{font-size:14px;line-height:1.7;color:var(--fg-dim);padding:16px;background:var(--bg);border-radius:var(--radius-sm);border:1px solid var(--border);white-space:pre-wrap}
+.vehicles-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px}
+.vehicle-card{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px}
+.vehicle-card h4{font-size:14px;font-weight:600;margin-bottom:12px;display:flex;align-items:center;gap:6px}
+.veh-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.params-table{width:100%;font-size:12px;border-collapse:collapse}
+.params-table td{padding:4px 8px;border-bottom:1px solid var(--border)}
+.params-table td:first-child{color:var(--fg-dim);width:45%}
+.params-table td:last-child{font-family:'Space Grotesk',monospace;font-weight:500;text-align:right}
+.source-tag{display:inline-block;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;padding:1px 5px;border-radius:3px;margin-left:4px;vertical-align:middle}
+.source-parsed{background:var(--success-dim);color:var(--success)}
+.source-default{background:var(--warning-dim);color:var(--warning)}
+.source-user{background:var(--accent-glow);color:var(--accent)}
+.gap-list{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.gap-chip{font-size:11px;padding:3px 8px;border-radius:4px;background:var(--warning-dim);color:var(--warning);font-weight:500}
+.sim-canvas-wrap{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;position:relative}
+.sim-canvas-wrap canvas{display:block;width:100%;height:500px}
+.sim-controls{display:flex;align-items:center;gap:12px;padding:12px 16px;border-top:1px solid var(--border)}
+.sim-controls input[type="range"]{flex:1;accent-color:var(--accent)}
+.sim-time{font-family:'Space Grotesk',monospace;font-size:13px;color:var(--fg-dim);min-width:60px;text-align:right}
+.sim-legend{display:flex;gap:16px;padding:8px 16px;font-size:12px;color:var(--fg-dim)}
+.sim-legend span{display:flex;align-items:center;gap:4px}
+.sim-legend .leg-dot{width:8px;height:8px;border-radius:50%}
+.dropdown-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
+.dropdown-group label{display:block;font-size:12px;font-weight:600;color:var(--fg-dim);margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px}
+.dropdown-group select{width:100%;padding:8px 10px;background:var(--bg);color:var(--fg);border:1px solid var(--border-accent);border-radius:var(--radius-sm);font-size:13px;font-family:inherit;cursor:pointer}
+.dropdown-group select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-glow)}
+.loading-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:999}
+.loading-box{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:32px 48px;text-align:center}
+.spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 12px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-box p{font-size:14px;color:var(--fg-dim)}
+.toast{position:fixed;bottom:24px;right:24px;padding:12px 20px;border-radius:var(--radius-sm);font-size:13px;font-weight:500;z-index:1000;transform:translateY(80px);opacity:0;transition:all .3s}
+.toast.show{transform:translateY(0);opacity:1}
+.toast-error{background:var(--danger);color:#fff}
+.toast-success{background:var(--success);color:#fff}
+.footer{text-align:center;padding:32px 24px;font-size:12px;color:var(--fg-muted);border-top:1px solid var(--border);margin-top:40px}
+@media(max-width:640px){.container{padding:16px}.steps-bar{flex-direction:column}.vehicles-grid{grid-template-columns:1fr}.sim-canvas-wrap canvas{height:320px}.app-header{padding:12px 16px}.status-dots{display:none}}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<header class="app-header">
+<div class="logo">Crash<span>Recon</span></div>
+<div class="badge">Gov of India</div>
+<div class="status-dots" id="statusDots">
+<span><span class="dot dot-off" id="dotPycrash"></span>pycrash</span>
+<span><span class="dot dot-off" id="dotGroq"></span>Groq AI</span>
+</div>
+</header>
+<div class="container">
+<div class="steps-bar">
+<div class="step-item active" id="step1"><span class="step-num">1</span>Upload PC-Crash File</div>
+<div class="step-item" id="step2"><span class="step-num">2</span>Review &amp; Configure</div>
+<div class="step-item" id="step3"><span class="step-num">3</span>Simulate</div>
+<div class="step-item" id="step4"><span class="step-num">4</span>Visualize</div>
+</div>
+<div id="panelUpload">
+<div class="card">
+<div class="upload-zone" id="uploadZone">
+<input type="file" id="fileInput" accept=".txt,.csv,.dat">
+<div class="upload-icon">&#x1F4C2;</div>
+<h3>Upload PC-Crash Values Export</h3>
+<p>Drag &amp; drop a .txt values file, or click to browse</p>
+<button class="sample-btn" id="sampleBtn" onclick="event.stopPropagation()">Load Sample File</button>
+</div>
+</div>
+</div>
+<div id="panelReview" hidden>
+<div class="card"><div class="card-title"><span class="icon">&#x1F916;</span>AI Scene Description</div><div class="scene-text" id="sceneDesc"></div></div>
+<div class="card"><div class="card-title"><span class="icon">&#x1F697;</span>Vehicles — pycrash Parameters</div><div class="vehicles-grid" id="vehiclesGrid"></div></div>
+<div class="card" id="dropdownCard"><div class="card-title"><span class="icon">&#x2699;&#xFE0F;</span>Configuration</div><div class="dropdown-grid" id="dropdownGrid"></div></div>
+<div style="display:flex;gap:12px;margin-top:8px">
+<button class="btn btn-secondary" onclick="resetApp()">&#x2190; Start Over</button>
+<button class="btn btn-primary" id="simBtn" onclick="runSimulation()">Run Simulation &#x2192;</button>
+</div>
+</div>
+<div id="panelSim" hidden>
+<div class="card">
+<div class="card-title"><span class="icon">&#x1F4CA;</span>2D Trajectory Reconstruction</div>
+<div class="sim-canvas-wrap">
+<canvas id="simCanvas"></canvas>
+<div class="sim-legend" id="simLegend"></div>
+<div class="sim-controls">
+<button class="btn btn-secondary" id="playBtn" onclick="togglePlayback()">&#x25B6; Play</button>
+<input type="range" id="timeSlider" min="0" max="100" value="100">
+<span class="sim-time" id="timeDisplay">0.00s</span>
+</div>
+</div>
+</div>
+<div class="card"><div class="card-title"><span class="icon">&#x1F4C8;</span>Simulation Results</div><div id="simStats"></div></div>
+<div style="display:flex;gap:12px;margin-top:8px">
+<button class="btn btn-secondary" onclick="showPanel('review')">&#x2190; Back to Review</button>
+<button class="btn btn-primary" onclick="exportResults()">Export JSON</button>
+</div>
+</div>
+</div>
+<div class="footer">CrashRecon — Open-source accident reconstruction for Indian road safety officers<br>Built with pycrash · FastAPI · Groq AI</div>
+<div class="loading-overlay" id="loadingOverlay" hidden><div class="loading-box"><div class="spinner"></div><p id="loadingText">Processing...</p></div></div>
+<div class="toast" id="toast"></div>
+<script>
+let sessionId=null,uploadData=null,simData=null,animFrame=null,isPlaying=false,playT=0;
+const API='';
+window.addEventListener('DOMContentLoaded',()=>{checkHealth();setupUpload()});
+async function checkHealth(){try{const r=await fetch(API+'/api/health');const d=await r.json();document.getElementById('dotPycrash').className='dot '+(d.pycrash_available?'dot-ok':'dot-off');document.getElementById('dotGroq').className='dot '+(d.groq_configured?'dot-ok':'dot-warn')}catch(e){console.error('Health check failed',e)}}
+function setupUpload(){const zone=document.getElementById('uploadZone');const input=document.getElementById('fileInput');zone.addEventListener('click',()=>input.click());zone.addEventListener('dragover',e=>{e.preventDefault();zone.classList.add('dragover')});zone.addEventListener('dragleave',()=>zone.classList.remove('dragover'));zone.addEventListener('drop',e=>{e.preventDefault();zone.classList.remove('dragover');if(e.dataTransfer.files.length)uploadFile(e.dataTransfer.files[0])});input.addEventListener('change',()=>{if(input.files.length)uploadFile(input.files[0])});document.getElementById('sampleBtn').addEventListener('click',loadSample)}
+async function loadSample(){showLoading('Loading sample PC-Crash file...');try{const r=await fetch(API+'/api/sample');if(!r.ok){toast('No sample file available on server','error');hideLoading();return}const blob=await r.blob();const file=new File([blob],'sample_1.txt',{type:'text/plain'});await uploadFile(file)}catch(e){toast('Failed to load sample: '+e.message,'error');hideLoading()}}
+async function uploadFile(file){showLoading('Parsing PC-Crash file & generating AI description...');try{const fd=new FormData();fd.append('file',file);const r=await fetch(API+'/api/upload',{method:'POST',body:fd});if(!r.ok){const err=await r.json().catch(()=>({}));throw new Error(err.detail||'Upload failed ('+r.status+')')}uploadData=await r.json();sessionId=uploadData.session_id;renderReview();showPanel('review');toast('File parsed successfully','success')}catch(e){toast(e.message,'error')}hideLoading()}
+function renderReview(){(function(){
+const sd=uploadData.scene_description;
+const el=document.getElementById('sceneDesc');
+if(!sd){el.textContent='No AI description available (configure GROQ_API_KEY for AI scene narration)';return}
+if(typeof sd==='string'){el.textContent=sd;return}
+let txt=sd.description||'';
+if(sd.assumptions&&sd.assumptions.length){txt+='\n\nAssumptions:\n'+sd.assumptions.map(a=>'  • '+a).join('\n')}
+if(sd.missing_items&&sd.missing_items.length){txt+='\n\nMissing data:\n'+sd.missing_items.map(m=>'  • '+m).join('\n')}
+if(sd.warnings&&sd.warnings.length){txt+='\n\nWarnings:\n'+sd.warnings.map(w=>'  ⚠ '+w).join('\n')}
+el.textContent=txt})();const grid=document.getElementById('vehiclesGrid');grid.innerHTML='';const colors=['var(--veh1)','var(--veh2)','#a855f7','#f97316'];uploadData.converted_vehicles.forEach((v,i)=>{const card=document.createElement('div');card.className='vehicle-card';const pi=v.pycrash_input;const fs=v.field_sources||{};const keyParams=[['Year',pi.year,fs.year],['Make / Model',(pi.vehmake||'?')+' '+(pi.vehmodel||'?'),'parsed'],['Weight (lb)',num(pi.weight),fs.weight],['Length (ft)',num(pi.length),fs.length],['Width (ft)',num(pi.width),fs.width],['Wheelbase (ft)',num(pi.wb),fs.wb],['CG Height (ft)',num(pi.hcg),fs.hcg],['Izz (lb ft s2)',num(pi.izz),fs.izz],['Initial Vx (mph)',num(pi.vx_initial),fs.vx_initial],['Heading (deg)',num(pi.head_angle),fs.head_angle]];let rows=keyParams.map(([label,val,src])=>{const s=(src&&typeof src==='object')?src.source:String(src||'');const srcClass=s==='parsed'?'source-parsed':s==='default'?'source-default':'source-user';const srcLabel=s==='parsed'?'FILE':s==='default'?'DEFAULT':s?s.toUpperCase():'';return '<tr><td>'+label+'</td><td>'+val+' <span class="source-tag '+srcClass+'">'+srcLabel+'</span></td></tr>'}).join('');let gapsHtml='';if(v.gaps&&v.gaps.length){gapsHtml='<div class="gap-list">'+v.gaps.map(g=>'<span class="gap-chip">'+(typeof g==='object'?g.field||JSON.stringify(g):g)+'</span>').join('')+'</div>'}card.innerHTML='<h4><span class="veh-dot" style="background:'+colors[i]+'"></span>Vehicle '+(i+1)+': '+(pi.vehmake||'Unknown')+' '+(pi.vehmodel||'')+'</h4><table class="params-table">'+rows+'</table>'+gapsHtml;grid.appendChild(card)});const dg=document.getElementById('dropdownGrid');dg.innerHTML='';const dropdowns=uploadData.dropdowns||{};for(const[field,cfg]of Object.entries(dropdowns)){const group=document.createElement('div');group.className='dropdown-group';const label=cfg.label||field.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase());const opts=Array.isArray(cfg)?cfg:(cfg.options||[]);group.innerHTML='<label>'+label+'</label><select data-field="'+field+'">'+opts.map((o,i)=>'<option value="'+o+'"'+(i===0?' selected':'')+'>'+o+'</option>').join('')+'</select>';dg.appendChild(group)}}
+async function runSimulation(){if(!sessionId)return;const selects=document.querySelectorAll('#dropdownGrid select');const selections={};selects.forEach(s=>{selections[s.dataset.field]=s.value});showLoading('Saving selections...');try{await fetch(API+'/api/selections',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_id:sessionId,selections})})}catch(e){}showLoading('Running pycrash simulation...');try{const r=await fetch(API+'/api/simulate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_id:sessionId})});if(!r.ok){const err=await r.json().catch(()=>({}));throw new Error(err.detail||'Simulation failed')}simData=await r.json();renderSimulation();showPanel('sim');toast('Simulation complete - '+simData.model_used.replace('_',' '),'success')}catch(e){toast(e.message,'error')}hideLoading()}
+function renderSimulation(){if(!simData||!simData.trajectories.length)return;const rawColors=['#3b82f6','#ef4444','#a855f7','#f97316'];const legend=document.getElementById('simLegend');legend.innerHTML=simData.trajectories.map((t,i)=>'<span><span class="leg-dot" style="background:'+rawColors[i]+'"></span>'+(t.vehicle_name||'Vehicle '+(i+1))+' ('+t.model+')</span>').join('');const stats=document.getElementById('simStats');stats.innerHTML=simData.trajectories.map((t,i)=>{const traj=t.trajectory;if(!traj.length)return'';const maxSpeed=Math.max(...traj.map(p=>p.speed_mph));const finalSpeed=traj[traj.length-1].speed_mph;const duration=traj[traj.length-1].t;const dx=traj[traj.length-1].x-traj[0].x;const dy=traj[traj.length-1].y-traj[0].y;const dist=Math.sqrt(dx*dx+dy*dy);return '<div class="vehicle-card" style="margin-bottom:12px"><h4><span class="veh-dot" style="background:'+rawColors[i]+'"></span>'+(t.vehicle_name||'Vehicle '+(i+1))+'</h4><table class="params-table"><tr><td>Model</td><td>'+t.model+'</td></tr><tr><td>Duration</td><td>'+duration.toFixed(2)+' s</td></tr><tr><td>Max Speed</td><td>'+maxSpeed.toFixed(1)+' mph</td></tr><tr><td>Final Speed</td><td>'+finalSpeed.toFixed(1)+' mph</td></tr><tr><td>Distance Traveled</td><td>'+dist.toFixed(1)+' ft</td></tr><tr><td>Trajectory Points</td><td>'+traj.length+'</td></tr></table></div>'}).join('');drawTrajectories(1.0);const slider=document.getElementById('timeSlider');slider.value=100;slider.oninput=()=>{drawTrajectories(slider.value/100);stopPlayback()}}
+function drawTrajectories(fraction){const canvas=document.getElementById('simCanvas');const ctx=canvas.getContext('2d');const dpr=window.devicePixelRatio||1;const rect=canvas.getBoundingClientRect();canvas.width=rect.width*dpr;canvas.height=rect.height*dpr;ctx.scale(dpr,dpr);const W=rect.width;const H=rect.height;let allX=[],allY=[];simData.trajectories.forEach(t=>{t.trajectory.forEach(p=>{allX.push(p.x);allY.push(p.y)})});if(!allX.length)return;if(allX.length>10000){allX=allX.filter((_,i)=>i%10===0);allY=allY.filter((_,i)=>i%10===0)}let minX=Math.min(...allX),maxX=Math.max(...allX);let minY=Math.min(...allY),maxY=Math.max(...allY);const rangeX=(maxX-minX)||20;const rangeY=(maxY-minY)||20;const pad=Math.max(rangeX,rangeY)*.15+10;minX-=pad;maxX+=pad;minY-=pad;maxY+=pad;const scaleX=W/(maxX-minX);const scaleY=H/(maxY-minY);const scale=Math.min(scaleX,scaleY);const offX=(W-(maxX-minX)*scale)/2;const offY=(H-(maxY-minY)*scale)/2;function tx(x){return offX+(x-minX)*scale}function ty(y){return H-(offY+(y-minY)*scale)}const cs=getComputedStyle(document.documentElement);ctx.fillStyle=cs.getPropertyValue('--bg').trim()||'#0c0e14';ctx.fillRect(0,0,W,H);const gridColor=cs.getPropertyValue('--border').trim()||'#1e2235';ctx.strokeStyle=gridColor;ctx.lineWidth=.5;const gridStep=Math.pow(10,Math.floor(Math.log10(Math.max(rangeX,rangeY)/5)));for(let gx=Math.ceil(minX/gridStep)*gridStep;gx<=maxX;gx+=gridStep){ctx.beginPath();ctx.moveTo(tx(gx),0);ctx.lineTo(tx(gx),H);ctx.stroke()}for(let gy=Math.ceil(minY/gridStep)*gridStep;gy<=maxY;gy+=gridStep){ctx.beginPath();ctx.moveTo(0,ty(gy));ctx.lineTo(W,ty(gy));ctx.stroke()}ctx.strokeStyle=cs.getPropertyValue('--fg-dim').trim()||'#7a8199';ctx.lineWidth=2;const barFt=gridStep;const barPx=barFt*scale;ctx.beginPath();ctx.moveTo(20,H-20);ctx.lineTo(20+barPx,H-20);ctx.stroke();ctx.fillStyle=cs.getPropertyValue('--fg-dim').trim()||'#7a8199';ctx.font='11px Inter,sans-serif';ctx.fillText(barFt+' ft',20,H-26);const rawColors=['#3b82f6','#ef4444','#a855f7','#f97316'];let maxT=0;simData.trajectories.forEach(t=>{const last=t.trajectory[t.trajectory.length-1];if(last&&last.t>maxT)maxT=last.t});const cutoffT=maxT*fraction;document.getElementById('timeDisplay').textContent=cutoffT.toFixed(2)+'s';simData.trajectories.forEach((t,vi)=>{const pts=t.trajectory.filter(p=>p.t<=cutoffT);if(pts.length<2)return;const color=rawColors[vi]||rawColors[0];for(let j=1;j<pts.length;j++){const alpha=.15+.85*(j/pts.length);ctx.strokeStyle=color+Math.round(alpha*255).toString(16).padStart(2,'0');ctx.lineWidth=2.5;ctx.beginPath();ctx.moveTo(tx(pts[j-1].x),ty(pts[j-1].y));ctx.lineTo(tx(pts[j].x),ty(pts[j].y));ctx.stroke()}const cur=pts[pts.length-1];const dims=t.dimensions||{};const vehL=(dims.length_ft||14)*scale;const vehW=(dims.width_ft||6)*scale;const headRad=-cur.heading*Math.PI/180;ctx.save();ctx.translate(tx(cur.x),ty(cur.y));ctx.rotate(headRad);ctx.fillStyle=color+'55';ctx.strokeStyle=color;ctx.lineWidth=2;ctx.beginPath();ctx.rect(-vehL/2,-vehW/2,vehL,vehW);ctx.fill();ctx.stroke();ctx.fillStyle=color;ctx.beginPath();ctx.moveTo(vehL/2,0);ctx.lineTo(vehL/2-8,-5);ctx.lineTo(vehL/2-8,5);ctx.closePath();ctx.fill();ctx.restore();ctx.fillStyle=color;ctx.beginPath();ctx.arc(tx(pts[0].x),ty(pts[0].y),5,0,Math.PI*2);ctx.fill();ctx.fillStyle=color;ctx.font='bold 12px Space Grotesk,sans-serif';ctx.fillText(cur.speed_mph.toFixed(0)+' mph',tx(cur.x)+15,ty(cur.y)-15)})}
+function togglePlayback(){if(isPlaying){stopPlayback()}else{isPlaying=true;document.getElementById('playBtn').textContent='Pause';playT=0;const slider=document.getElementById('timeSlider');function step(){playT+=.5;if(playT>100){stopPlayback();return}slider.value=playT;drawTrajectories(playT/100);animFrame=requestAnimationFrame(step)}animFrame=requestAnimationFrame(step)}}
+function stopPlayback(){isPlaying=false;document.getElementById('playBtn').textContent='Play';if(animFrame){cancelAnimationFrame(animFrame);animFrame=null}}
+function exportResults(){if(!simData)return;const blob=new Blob([JSON.stringify(simData,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='crashrecon_simulation_'+sessionId+'.json';a.click();URL.revokeObjectURL(url)}
+function showPanel(name){document.getElementById('panelUpload').hidden=name!=='upload';document.getElementById('panelReview').hidden=name!=='review';document.getElementById('panelSim').hidden=name!=='sim';const steps={upload:1,review:2,sim:3};const current=steps[name]||1;for(let i=1;i<=4;i++){const el=document.getElementById('step'+i);el.className='step-item'+(i===current?' active':i<current?' done':'')}}
+function resetApp(){sessionId=null;uploadData=null;simData=null;stopPlayback();document.getElementById('fileInput').value='';showPanel('upload')}
+function num(v){if(v==null)return'—';return typeof v==='number'?v.toFixed(2):v}
+function showLoading(text){document.getElementById('loadingText').textContent=text||'Processing...';document.getElementById('loadingOverlay').hidden=false}
+function hideLoading(){document.getElementById('loadingOverlay').hidden=true}
+function toast(msg,type){const el=document.getElementById('toast');el.textContent=msg;el.className='toast toast-'+(type||'success');requestAnimationFrame(()=>el.classList.add('show'));setTimeout(()=>el.classList.remove('show'),3500)}
+window.addEventListener('resize',()=>{if(simData){drawTrajectories(document.getElementById('timeSlider').value/100)}});
+</script>
+</body>
+</html>
