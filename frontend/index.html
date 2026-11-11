@@ -131,6 +131,7 @@ h1,h2,h3,h4{font-family:'Space Grotesk','Inter',sans-serif;line-height:1.2}
 <button class="btn btn-secondary" id="playBtn" onclick="togglePlayback()">&#x25B6; Play</button>
 <input type="range" id="timeSlider" min="0" max="100" value="100">
 <span class="sim-time" id="timeDisplay">0.00s</span>
+<select id="camMode" title="Camera" style="padding:6px 8px;background:var(--bg);color:var(--fg);border:1px solid var(--border-accent);border-radius:6px;font-size:12px" onchange="drawTrajectories(document.getElementById('timeSlider').value/100)"><option value="0">Close-up: Vehicle 1</option><option value="1">Close-up: Vehicle 2</option><option value="both">Both vehicles</option><option value="all">Full path</option></select>
 </div>
 </div>
 </div>
@@ -173,23 +174,44 @@ canvas.width=rect.width*dpr;canvas.height=rect.height*dpr;
 ctx.scale(dpr,dpr);
 const W=rect.width,H=rect.height;
 
-// Collect all points for bounds
+// Camera: close-up on one vehicle, both vehicles, or the full path
+let maxT0=0;
+simData.trajectories.forEach(t=>{const l=t.trajectory[t.trajectory.length-1];if(l&&l.t>maxT0)maxT0=l.t});
+const cutoff0=maxT0*fraction;
+const camEl=document.getElementById('camMode');
+let cam=camEl?camEl.value:'all';
+function frameAt(t,c){let f=t.geometry[0];for(const g of t.geometry){if(g.t!=null&&g.t<=c)f=g;else if(g.t!=null&&g.t>c)break}return f}
 let allX=[],allY=[];
-simData.trajectories.forEach(t=>{
-  t.trajectory.forEach(p=>{allX.push(p.x);allY.push(p.y)});
-  // Also include geometry bounds if available
-  if(t.geometry&&t.geometry.length){
-    t.geometry.forEach(g=>{
-      if(g.body){g.body.x.forEach(v=>allX.push(v));g.body.y.forEach(v=>allY.push(v))}
-    });
-  }
-});
+if(cam!=='all'){
+  simData.trajectories.forEach((t,vi)=>{
+    if(cam!=='both'&&String(vi)!==cam)return;
+    if(!t.geometry||!t.geometry.length)return;
+    const f=frameAt(t,cutoff0);
+    if(f&&f.body){f.body.x.forEach(v=>allX.push(v));f.body.y.forEach(v=>allY.push(v))}
+  });
+  if(!allX.length)cam='all';
+}
+if(cam==='all'){
+  simData.trajectories.forEach(t=>{
+    t.trajectory.forEach(p=>{allX.push(p.x);allY.push(p.y)});
+    if(t.geometry&&t.geometry.length){
+      t.geometry.forEach(g=>{
+        if(g.body){g.body.x.forEach(v=>allX.push(v));g.body.y.forEach(v=>allY.push(v))}
+      });
+    }
+  });
+}
 if(!allX.length)return;
 
 let minX=Math.min(...allX),maxX=Math.max(...allX);
 let minY=Math.min(...allY),maxY=Math.max(...allY);
+if(cam!=='all'){
+  const cx=(minX+maxX)/2,cy=(minY+maxY)/2;
+  const half=Math.max(8,(maxX-minX)/2,(maxY-minY)/2);
+  minX=cx-half;maxX=cx+half;minY=cy-half;maxY=cy+half;
+}
 const rangeX=(maxX-minX)||20,rangeY=(maxY-minY)||20;
-const pad=Math.max(rangeX,rangeY)*.15+10;
+const pad=cam==='all'?Math.max(rangeX,rangeY)*.15+10:Math.max(rangeX,rangeY)*.25;
 minX-=pad;maxX+=pad;minY-=pad;maxY+=pad;
 const scaleX=W/(maxX-minX),scaleY=H/(maxY-minY);
 const scale=Math.min(scaleX,scaleY);
@@ -204,7 +226,8 @@ ctx.fillRect(0,0,W,H);
 // Grid
 const gridColor=cs.getPropertyValue('--border').trim()||'#1e2235';
 ctx.strokeStyle=gridColor;ctx.lineWidth=.5;
-const gridStep=Math.pow(10,Math.floor(Math.log10(Math.max(rangeX,rangeY)/5)));
+const rawStep=Math.max(rangeX,rangeY)/6,mag=Math.pow(10,Math.floor(Math.log10(rawStep))),rs=rawStep/mag;
+const gridStep=rs<2?mag:rs<5?2*mag:5*mag;
 for(let gx=Math.ceil(minX/gridStep)*gridStep;gx<=maxX;gx+=gridStep){ctx.beginPath();ctx.moveTo(tx(gx),0);ctx.lineTo(tx(gx),H);ctx.stroke()}
 for(let gy=Math.ceil(minY/gridStep)*gridStep;gy<=maxY;gy+=gridStep){ctx.beginPath();ctx.moveTo(0,ty(gy));ctx.lineTo(W,ty(gy));ctx.stroke()}
 
@@ -216,9 +239,8 @@ ctx.fillStyle=cs.getPropertyValue('--fg-dim').trim()||'#7a8199';
 ctx.font='11px Inter,sans-serif';ctx.fillText(barFt+' ft',20,H-26);
 
 const rawColors=['#3b82f6','#ef4444','#a855f7','#f97316'];
-let maxT=0;
-simData.trajectories.forEach(t=>{const last=t.trajectory[t.trajectory.length-1];if(last&&last.t>maxT)maxT=last.t});
-const cutoffT=maxT*fraction;
+const maxT=maxT0;
+const cutoffT=cutoff0;
 document.getElementById('timeDisplay').textContent=cutoffT.toFixed(2)+'s';
 
 // Helper: draw a closed polygon from arrays of x,y
@@ -230,6 +252,74 @@ function drawPoly(xs,ys,fill,stroke,lw){
   ctx.closePath();
   if(fill){ctx.fillStyle=fill;ctx.fill()}
   if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=lw||1.5;ctx.stroke()}
+}
+
+// Draw a top-down car or truck from pycrash's body corners [LF,RF,RR,LR] and wheel polygons
+function shape(P,list,fill,stroke,lw){
+  ctx.beginPath();
+  list.forEach((uv,i)=>{const p=P(uv[0],uv[1]);const X=tx(p[0]),Y=ty(p[1]);i?ctx.lineTo(X,Y):ctx.moveTo(X,Y)});
+  ctx.closePath();
+  if(fill){ctx.fillStyle=fill;ctx.fill()}
+  if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=lw||1;ctx.stroke()}
+}
+function line(P,a,b,stroke,lw){
+  const p=P(a[0],a[1]),q=P(b[0],b[1]);
+  ctx.strokeStyle=stroke;ctx.lineWidth=lw||1;ctx.beginPath();ctx.moveTo(tx(p[0]),ty(p[1]));ctx.lineTo(tx(q[0]),ty(q[1]));ctx.stroke();
+}
+function drawVehicleShape(f,color,truck){
+  const b=f.body;if(!b||b.x.length<4)return;
+  const LF=[b.x[0],b.y[0]],RF=[b.x[1],b.y[1]],RR=[b.x[2],b.y[2]],LR=[b.x[3],b.y[3]];
+  // u: 0 = rear, 1 = front.  v: 0 = left side, 1 = right side.
+  const P=(u,v)=>{
+    const lx=LR[0]+u*(LF[0]-LR[0]),ly=LR[1]+u*(LF[1]-LR[1]);
+    const rx=RR[0]+u*(RF[0]-RR[0]),ry=RR[1]+u*(RF[1]-RR[1]);
+    return[lx+v*(rx-lx),ly+v*(ry-ly)];
+  };
+  const quad=(ctl,end)=>{const c=P(ctl[0],ctl[1]),e=P(end[0],end[1]);ctx.quadraticCurveTo(tx(c[0]),ty(c[1]),tx(e[0]),ty(e[1]))};
+  const mv=(uv)=>{const p=P(uv[0],uv[1]);ctx.moveTo(tx(p[0]),ty(p[1]))};
+  const ln=(uv)=>{const p=P(uv[0],uv[1]);ctx.lineTo(tx(p[0]),ty(p[1]))};
+  const ru=truck?0.03:0.07,rv=truck?0.07:0.13;
+  // Rounded body silhouette (front corners rounder than rear for a car)
+  ctx.beginPath();
+  mv([ru,0]);ln([1-ru*1.6,0]);quad([1,0],[1,rv*1.2]);ln([1,1-rv*1.2]);quad([1,1],[1-ru*1.6,1]);
+  ln([ru,1]);quad([0,1],[0,1-rv]);ln([0,rv]);quad([0,0],[ru,0]);ctx.closePath();
+  ctx.fillStyle=color;ctx.fill();
+  ctx.strokeStyle='rgba(0,0,0,.55)';ctx.lineWidth=1.5;ctx.stroke();
+  const glass='rgba(12,20,38,.92)',sheen='rgba(255,255,255,.20)';
+  if(!truck){
+    // Windshield, roof, rear window
+    shape(P,[[0.64,0.14],[0.64,0.86],[0.54,0.9],[0.54,0.1]],glass);
+    shape(P,[[0.54,0.1],[0.54,0.9],[0.36,0.9],[0.36,0.1]],sheen,'rgba(0,0,0,.25)',1);
+    shape(P,[[0.36,0.1],[0.36,0.9],[0.27,0.84],[0.27,0.16]],glass);
+    // Hood crease and boot line
+    line(P,[0.66,0.5],[0.94,0.5],'rgba(0,0,0,.25)',1);
+    line(P,[0.05,0.5],[0.25,0.5],'rgba(0,0,0,.18)',1);
+    // Headlights and tail lights
+    shape(P,[[0.96,0.07],[1,0.1],[1,0.27],[0.94,0.22]],'#fef3c7');
+    shape(P,[[0.96,0.93],[1,0.9],[1,0.73],[0.94,0.78]],'#fef3c7');
+    shape(P,[[0.02,0.06],[0,0.08],[0,0.24],[0.05,0.2]],'#dc2626');
+    shape(P,[[0.02,0.94],[0,0.92],[0,0.76],[0.05,0.8]],'#dc2626');
+    // Side mirrors
+    shape(P,[[0.6,-0.01],[0.64,-0.01],[0.64,0.07],[0.6,0.07]],color,'rgba(0,0,0,.5)',1);
+    shape(P,[[0.6,1.01],[0.64,1.01],[0.64,0.93],[0.6,0.93]],color,'rgba(0,0,0,.5)',1);
+  }else{
+    // Cargo box (rear 74%) and cab (front 24%)
+    shape(P,[[0.02,0.04],[0.02,0.96],[0.73,0.96],[0.73,0.04]],'#cbd5e1','rgba(0,0,0,.5)',1.2);
+    for(let u=0.1;u<0.72;u+=0.09)line(P,[u,0.05],[u,0.95],'rgba(0,0,0,.18)',1);
+    line(P,[0.02,0.5],[0.73,0.5],'rgba(0,0,0,.12)',1);
+    shape(P,[[0.98,0.1],[0.98,0.9],[0.9,0.9],[0.9,0.1]],glass);
+    shape(P,[[0.9,0.1],[0.9,0.9],[0.78,0.9],[0.78,0.1]],sheen,'rgba(0,0,0,.25)',1);
+    shape(P,[[0.985,0.08],[1,0.1],[1,0.24],[0.97,0.2]],'#fef3c7');
+    shape(P,[[0.985,0.92],[1,0.9],[1,0.76],[0.97,0.8]],'#fef3c7');
+    shape(P,[[0.01,0.08],[0,0.1],[0,0.22],[0.03,0.2]],'#dc2626');
+    shape(P,[[0.01,0.92],[0,0.9],[0,0.78],[0.03,0.8]],'#dc2626');
+    shape(P,[[0.86,-0.02],[0.9,-0.02],[0.9,0.06],[0.86,0.06]],'#111827');
+    shape(P,[[0.86,1.02],[0.9,1.02],[0.9,0.94],[0.86,0.94]],'#111827');
+  }
+  // Tyres on top, so wheel positions and steering are visible
+  if(f.wheels){
+    for(const[wn,w]of Object.entries(f.wheels)){drawPoly(w.x,w.y,'#0a0a0a','#475569',1.2)}
+  }
 }
 
 simData.trajectories.forEach((t,vi)=>{
@@ -272,23 +362,15 @@ simData.trajectories.forEach((t,vi)=>{
       }
     }
 
-    // Draw current vehicle body outline
-    if(gFrame.body){
-      drawPoly(gFrame.body.x,gFrame.body.y,color+'40',color,2.5);
-    }
+    // Draw the vehicle as a car or truck
+    const isTruck=((t.dimensions&&t.dimensions.length_ft)||0)>=20||/eicher|truck|lorry|tata|ashok|bus|tipper/i.test(t.vehicle_name||'');
+    drawVehicleShape(gFrame,color,isTruck);
 
-    // Draw 4 wheels
-    if(gFrame.wheels){
-      for(const[wname,wdata]of Object.entries(gFrame.wheels)){
-        drawPoly(wdata.x,wdata.y,color+'90',color,1.5);
-      }
-    }
-
-    // Draw CG dot
+    // CG marker (small, so it does not hide the roof)
     if(gFrame.cg){
       ctx.fillStyle='#ffffff';ctx.beginPath();
-      ctx.arc(tx(gFrame.cg.x),ty(gFrame.cg.y),3,0,Math.PI*2);ctx.fill();
-      ctx.strokeStyle=color;ctx.lineWidth=1;ctx.stroke();
+      ctx.arc(tx(gFrame.cg.x),ty(gFrame.cg.y),2.5,0,Math.PI*2);ctx.fill();
+      ctx.strokeStyle='rgba(0,0,0,.7)';ctx.lineWidth=1;ctx.stroke();
     }
 
     // Draw velocity vector from CG
@@ -324,7 +406,7 @@ simData.trajectories.forEach((t,vi)=>{
 
   // 4. Speed label
   ctx.fillStyle=color;ctx.font='bold 12px Space Grotesk,sans-serif';
-  ctx.fillText(cur.speed_mph.toFixed(0)+' mph',tx(cur.x)+15,ty(cur.y)-15);
+  ctx.fillText(cur.speed_mph.toFixed(0)+' mph',tx(cur.x)-18,ty(cur.y)-Math.max(18,5.2*scale));
 
   // 5. Vehicle name label at start position
   ctx.fillStyle=color+'cc';ctx.font='11px Inter,sans-serif';
