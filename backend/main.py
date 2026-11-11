@@ -198,10 +198,12 @@ def _run_simulation_sync(converted, selections, session_id):
                 )
                 sim = SingleMotion(f"sim_{name}", veh)
                 traj = _extract_pycrash_trajectory(sim.veh, pi)
+                geom = _extract_vehicle_geometry(sim.veh)
                 trajectories.append({
                     "vehicle_id": f"v{i+1}",
                     "vehicle_name": pi.get("vehmake", "") + " " + pi.get("vehmodel", ""),
                     "trajectory": traj,
+                    "geometry": geom,
                     "dimensions": {
                         "length_ft": pi.get("length", 14),
                         "width_ft": pi.get("width", 6),
@@ -332,6 +334,88 @@ def _extract_pycrash_trajectory(sim_veh, pi: dict) -> list[dict]:
         traceback.print_exc()
 
     return trajectory
+
+
+def _extract_vehicle_geometry(sim_veh) -> list[dict]:
+    """
+    Extract detailed vehicle geometry at sampled timesteps from pycrash's
+    position DataFrames (p_gx, p_gy). Each frame contains:
+      - body: 4 corners (b_lfc, b_rfc, b_rrc, b_lrc)
+      - wheels: 4 wheels × 4 corners each (lfw_a/b/c/d, rfw_a/b/c/d, etc.)
+      - cg: center of gravity position
+      - velocity vector endpoint
+    """
+    geometry = []
+    try:
+        pgx = sim_veh.p_gx
+        pgy = sim_veh.p_gy
+        model_df = sim_veh.model
+
+        if pgx is None or pgy is None or len(pgx) == 0:
+            return []
+
+        # Body corner columns
+        body_cols = ["b_lfc", "b_rfc", "b_rrc", "b_lrc"]
+        # Wheel corner columns (4 wheels × 4 corners)
+        wheel_groups = {
+            "lf": ["lfw_a", "lfw_b", "lfw_c", "lfw_d"],  # left front
+            "rf": ["rfw_a", "rfw_b", "rfw_c", "rfw_d"],  # right front
+            "rr": ["rrw_a", "rrw_b", "rrw_c", "rrw_d"],  # right rear
+            "lr": ["lrw_a", "lrw_b", "lrw_c", "lrw_d"],  # left rear
+        }
+
+        # Check which columns exist
+        avail_body = [c for c in body_cols if c in pgx.columns and c in pgy.columns]
+        avail_wheels = {}
+        for wname, wcols in wheel_groups.items():
+            avail = [c for c in wcols if c in pgx.columns and c in pgy.columns]
+            if len(avail) == 4:
+                avail_wheels[wname] = avail
+
+        if not avail_body:
+            return []
+
+        # Sample ~150 frames for API response
+        total = len(pgx)
+        step = max(1, total // 150)
+        indices = list(range(0, total, step))
+        if total - 1 not in indices:
+            indices.append(total - 1)
+
+        for idx in indices:
+            frame = {"i": idx}
+
+            # Time from model DataFrame
+            if model_df is not None and idx < len(model_df):
+                frame["t"] = round(float(model_df.iloc[idx]["t"]), 3)
+
+            # Body corners [lfc, rfc, rrc, lrc] — closed polygon
+            body_x = [round(float(pgx.iloc[idx][c]), 3) for c in avail_body]
+            body_y = [round(float(pgy.iloc[idx][c]), 3) for c in avail_body]
+            frame["body"] = {"x": body_x, "y": body_y}
+
+            # Wheels
+            wheels = {}
+            for wname, wcols in avail_wheels.items():
+                wx = [round(float(pgx.iloc[idx][c]), 3) for c in wcols]
+                wy = [round(float(pgy.iloc[idx][c]), 3) for c in wcols]
+                wheels[wname] = {"x": wx, "y": wy}
+            frame["wheels"] = wheels
+
+            # CG position
+            if "cg" in pgx.columns and "cg" in pgy.columns:
+                frame["cg"] = {
+                    "x": round(float(pgx.iloc[idx]["cg"]), 3),
+                    "y": round(float(pgy.iloc[idx]["cg"]), 3),
+                }
+
+            geometry.append(frame)
+
+    except Exception as e:
+        print(f"[pycrash] Geometry extraction error: {e}")
+        traceback.print_exc()
+
+    return geometry
 
 
 def _compute_kinematic_trajectory(cv: dict) -> list[dict]:

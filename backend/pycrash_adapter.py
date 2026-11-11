@@ -255,6 +255,19 @@ def convert_vehicle(parsed_veh: dict, vehicle_index: int = 0) -> dict:
     else:
         _set("omega_z", 0.0, "deg/s", "default")
 
+    # ─── lcgf / lcgr fallback (wb/2 approximation) ───
+    if "lcgf" not in pycrash_input:
+        wb_val = pycrash_input.get("wb")
+        if wb_val:
+            half_wb = round(wb_val / 2, 4)
+            _set("lcgf", half_wb, "ft", "derived", f"wb/2 = {wb_val}/2 (CG at wheelbase center)")
+            _set("lcgr", half_wb, "ft", "derived", f"wb/2 = {wb_val}/2 (CG at wheelbase center)")
+        else:
+            _set("lcgf", 4.185, "ft", "default", "~1.276m typical sedan CG-to-front-axle")
+            _set("lcgr", 4.185, "ft", "default", "~1.276m typical sedan CG-to-rear-axle")
+            gaps.append("lcgf")
+            gaps.append("lcgr")
+
     # ─── Defaults for missing fields ───
     for key, default_info in defaults.items():
         if key not in pycrash_input:

@@ -164,7 +164,173 @@ if(sd.warnings&&sd.warnings.length){txt+='\n\nWarnings:\n'+sd.warnings.map(w=>' 
 el.textContent=txt})();const grid=document.getElementById('vehiclesGrid');grid.innerHTML='';const colors=['var(--veh1)','var(--veh2)','#a855f7','#f97316'];uploadData.converted_vehicles.forEach((v,i)=>{const card=document.createElement('div');card.className='vehicle-card';const pi=v.pycrash_input;const fs=v.field_sources||{};const keyParams=[['Year',pi.year,fs.year],['Make / Model',(pi.vehmake||'?')+' '+(pi.vehmodel||'?'),'parsed'],['Weight (lb)',num(pi.weight),fs.weight],['Length (ft)',num(pi.length),fs.length],['Width (ft)',num(pi.width),fs.width],['Wheelbase (ft)',num(pi.wb),fs.wb],['CG Height (ft)',num(pi.hcg),fs.hcg],['Izz (lb ft s2)',num(pi.izz),fs.izz],['Initial Vx (mph)',num(pi.vx_initial),fs.vx_initial],['Heading (deg)',num(pi.head_angle),fs.head_angle]];let rows=keyParams.map(([label,val,src])=>{const s=(src&&typeof src==='object')?src.source:String(src||'');const srcClass=s==='parsed'?'source-parsed':s==='default'?'source-default':'source-user';const srcLabel=s==='parsed'?'FILE':s==='default'?'DEFAULT':s?s.toUpperCase():'';return '<tr><td>'+label+'</td><td>'+val+' <span class="source-tag '+srcClass+'">'+srcLabel+'</span></td></tr>'}).join('');let gapsHtml='';if(v.gaps&&v.gaps.length){gapsHtml='<div class="gap-list">'+v.gaps.map(g=>'<span class="gap-chip">'+(typeof g==='object'?g.field||JSON.stringify(g):g)+'</span>').join('')+'</div>'}card.innerHTML='<h4><span class="veh-dot" style="background:'+colors[i]+'"></span>Vehicle '+(i+1)+': '+(pi.vehmake||'Unknown')+' '+(pi.vehmodel||'')+'</h4><table class="params-table">'+rows+'</table>'+gapsHtml;grid.appendChild(card)});const dg=document.getElementById('dropdownGrid');dg.innerHTML='';const dropdowns=uploadData.dropdowns||{};for(const[field,cfg]of Object.entries(dropdowns)){const group=document.createElement('div');group.className='dropdown-group';const label=cfg.label||field.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase());const opts=Array.isArray(cfg)?cfg:(cfg.options||[]);group.innerHTML='<label>'+label+'</label><select data-field="'+field+'">'+opts.map((o,i)=>'<option value="'+o+'"'+(i===0?' selected':'')+'>'+o+'</option>').join('')+'</select>';dg.appendChild(group)}}
 async function runSimulation(){if(!sessionId)return;const selects=document.querySelectorAll('#dropdownGrid select');const selections={};selects.forEach(s=>{selections[s.dataset.field]=s.value});showLoading('Saving selections...');try{await fetch(API+'/api/selections',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_id:sessionId,selections})})}catch(e){}showLoading('Running pycrash simulation...');try{const r=await fetch(API+'/api/simulate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_id:sessionId})});if(!r.ok){const err=await r.json().catch(()=>({}));throw new Error(err.detail||'Simulation failed')}simData=await r.json();renderSimulation();showPanel('sim');toast('Simulation complete - '+simData.model_used.replace('_',' '),'success')}catch(e){toast(e.message,'error')}hideLoading()}
 function renderSimulation(){if(!simData||!simData.trajectories.length)return;const rawColors=['#3b82f6','#ef4444','#a855f7','#f97316'];const legend=document.getElementById('simLegend');legend.innerHTML=simData.trajectories.map((t,i)=>'<span><span class="leg-dot" style="background:'+rawColors[i]+'"></span>'+(t.vehicle_name||'Vehicle '+(i+1))+' ('+t.model+')</span>').join('');const stats=document.getElementById('simStats');stats.innerHTML=simData.trajectories.map((t,i)=>{const traj=t.trajectory;if(!traj.length)return'';const maxSpeed=Math.max(...traj.map(p=>p.speed_mph));const finalSpeed=traj[traj.length-1].speed_mph;const duration=traj[traj.length-1].t;const dx=traj[traj.length-1].x-traj[0].x;const dy=traj[traj.length-1].y-traj[0].y;const dist=Math.sqrt(dx*dx+dy*dy);return '<div class="vehicle-card" style="margin-bottom:12px"><h4><span class="veh-dot" style="background:'+rawColors[i]+'"></span>'+(t.vehicle_name||'Vehicle '+(i+1))+'</h4><table class="params-table"><tr><td>Model</td><td>'+t.model+'</td></tr><tr><td>Duration</td><td>'+duration.toFixed(2)+' s</td></tr><tr><td>Max Speed</td><td>'+maxSpeed.toFixed(1)+' mph</td></tr><tr><td>Final Speed</td><td>'+finalSpeed.toFixed(1)+' mph</td></tr><tr><td>Distance Traveled</td><td>'+dist.toFixed(1)+' ft</td></tr><tr><td>Trajectory Points</td><td>'+traj.length+'</td></tr></table></div>'}).join('');drawTrajectories(1.0);const slider=document.getElementById('timeSlider');slider.value=100;slider.oninput=()=>{drawTrajectories(slider.value/100);stopPlayback()}}
-function drawTrajectories(fraction){const canvas=document.getElementById('simCanvas');const ctx=canvas.getContext('2d');const dpr=window.devicePixelRatio||1;const rect=canvas.getBoundingClientRect();canvas.width=rect.width*dpr;canvas.height=rect.height*dpr;ctx.scale(dpr,dpr);const W=rect.width;const H=rect.height;let allX=[],allY=[];simData.trajectories.forEach(t=>{t.trajectory.forEach(p=>{allX.push(p.x);allY.push(p.y)})});if(!allX.length)return;if(allX.length>10000){allX=allX.filter((_,i)=>i%10===0);allY=allY.filter((_,i)=>i%10===0)}let minX=Math.min(...allX),maxX=Math.max(...allX);let minY=Math.min(...allY),maxY=Math.max(...allY);const rangeX=(maxX-minX)||20;const rangeY=(maxY-minY)||20;const pad=Math.max(rangeX,rangeY)*.15+10;minX-=pad;maxX+=pad;minY-=pad;maxY+=pad;const scaleX=W/(maxX-minX);const scaleY=H/(maxY-minY);const scale=Math.min(scaleX,scaleY);const offX=(W-(maxX-minX)*scale)/2;const offY=(H-(maxY-minY)*scale)/2;function tx(x){return offX+(x-minX)*scale}function ty(y){return H-(offY+(y-minY)*scale)}const cs=getComputedStyle(document.documentElement);ctx.fillStyle=cs.getPropertyValue('--bg').trim()||'#0c0e14';ctx.fillRect(0,0,W,H);const gridColor=cs.getPropertyValue('--border').trim()||'#1e2235';ctx.strokeStyle=gridColor;ctx.lineWidth=.5;const gridStep=Math.pow(10,Math.floor(Math.log10(Math.max(rangeX,rangeY)/5)));for(let gx=Math.ceil(minX/gridStep)*gridStep;gx<=maxX;gx+=gridStep){ctx.beginPath();ctx.moveTo(tx(gx),0);ctx.lineTo(tx(gx),H);ctx.stroke()}for(let gy=Math.ceil(minY/gridStep)*gridStep;gy<=maxY;gy+=gridStep){ctx.beginPath();ctx.moveTo(0,ty(gy));ctx.lineTo(W,ty(gy));ctx.stroke()}ctx.strokeStyle=cs.getPropertyValue('--fg-dim').trim()||'#7a8199';ctx.lineWidth=2;const barFt=gridStep;const barPx=barFt*scale;ctx.beginPath();ctx.moveTo(20,H-20);ctx.lineTo(20+barPx,H-20);ctx.stroke();ctx.fillStyle=cs.getPropertyValue('--fg-dim').trim()||'#7a8199';ctx.font='11px Inter,sans-serif';ctx.fillText(barFt+' ft',20,H-26);const rawColors=['#3b82f6','#ef4444','#a855f7','#f97316'];let maxT=0;simData.trajectories.forEach(t=>{const last=t.trajectory[t.trajectory.length-1];if(last&&last.t>maxT)maxT=last.t});const cutoffT=maxT*fraction;document.getElementById('timeDisplay').textContent=cutoffT.toFixed(2)+'s';simData.trajectories.forEach((t,vi)=>{const pts=t.trajectory.filter(p=>p.t<=cutoffT);if(pts.length<2)return;const color=rawColors[vi]||rawColors[0];for(let j=1;j<pts.length;j++){const alpha=.15+.85*(j/pts.length);ctx.strokeStyle=color+Math.round(alpha*255).toString(16).padStart(2,'0');ctx.lineWidth=2.5;ctx.beginPath();ctx.moveTo(tx(pts[j-1].x),ty(pts[j-1].y));ctx.lineTo(tx(pts[j].x),ty(pts[j].y));ctx.stroke()}const cur=pts[pts.length-1];const dims=t.dimensions||{};const vehL=(dims.length_ft||14)*scale;const vehW=(dims.width_ft||6)*scale;const headRad=-cur.heading*Math.PI/180;ctx.save();ctx.translate(tx(cur.x),ty(cur.y));ctx.rotate(headRad);ctx.fillStyle=color+'55';ctx.strokeStyle=color;ctx.lineWidth=2;ctx.beginPath();ctx.rect(-vehL/2,-vehW/2,vehL,vehW);ctx.fill();ctx.stroke();ctx.fillStyle=color;ctx.beginPath();ctx.moveTo(vehL/2,0);ctx.lineTo(vehL/2-8,-5);ctx.lineTo(vehL/2-8,5);ctx.closePath();ctx.fill();ctx.restore();ctx.fillStyle=color;ctx.beginPath();ctx.arc(tx(pts[0].x),ty(pts[0].y),5,0,Math.PI*2);ctx.fill();ctx.fillStyle=color;ctx.font='bold 12px Space Grotesk,sans-serif';ctx.fillText(cur.speed_mph.toFixed(0)+' mph',tx(cur.x)+15,ty(cur.y)-15)})}
+function drawTrajectories(fraction){
+const canvas=document.getElementById('simCanvas');
+const ctx=canvas.getContext('2d');
+const dpr=window.devicePixelRatio||1;
+const rect=canvas.getBoundingClientRect();
+canvas.width=rect.width*dpr;canvas.height=rect.height*dpr;
+ctx.scale(dpr,dpr);
+const W=rect.width,H=rect.height;
+
+// Collect all points for bounds
+let allX=[],allY=[];
+simData.trajectories.forEach(t=>{
+  t.trajectory.forEach(p=>{allX.push(p.x);allY.push(p.y)});
+  // Also include geometry bounds if available
+  if(t.geometry&&t.geometry.length){
+    t.geometry.forEach(g=>{
+      if(g.body){g.body.x.forEach(v=>allX.push(v));g.body.y.forEach(v=>allY.push(v))}
+    });
+  }
+});
+if(!allX.length)return;
+
+let minX=Math.min(...allX),maxX=Math.max(...allX);
+let minY=Math.min(...allY),maxY=Math.max(...allY);
+const rangeX=(maxX-minX)||20,rangeY=(maxY-minY)||20;
+const pad=Math.max(rangeX,rangeY)*.15+10;
+minX-=pad;maxX+=pad;minY-=pad;maxY+=pad;
+const scaleX=W/(maxX-minX),scaleY=H/(maxY-minY);
+const scale=Math.min(scaleX,scaleY);
+const offX=(W-(maxX-minX)*scale)/2,offY=(H-(maxY-minY)*scale)/2;
+function tx(x){return offX+(x-minX)*scale}
+function ty(y){return H-(offY+(y-minY)*scale)}
+
+const cs=getComputedStyle(document.documentElement);
+ctx.fillStyle=cs.getPropertyValue('--bg').trim()||'#0c0e14';
+ctx.fillRect(0,0,W,H);
+
+// Grid
+const gridColor=cs.getPropertyValue('--border').trim()||'#1e2235';
+ctx.strokeStyle=gridColor;ctx.lineWidth=.5;
+const gridStep=Math.pow(10,Math.floor(Math.log10(Math.max(rangeX,rangeY)/5)));
+for(let gx=Math.ceil(minX/gridStep)*gridStep;gx<=maxX;gx+=gridStep){ctx.beginPath();ctx.moveTo(tx(gx),0);ctx.lineTo(tx(gx),H);ctx.stroke()}
+for(let gy=Math.ceil(minY/gridStep)*gridStep;gy<=maxY;gy+=gridStep){ctx.beginPath();ctx.moveTo(0,ty(gy));ctx.lineTo(W,ty(gy));ctx.stroke()}
+
+// Scale bar
+ctx.strokeStyle=cs.getPropertyValue('--fg-dim').trim()||'#7a8199';ctx.lineWidth=2;
+const barFt=gridStep,barPx=barFt*scale;
+ctx.beginPath();ctx.moveTo(20,H-20);ctx.lineTo(20+barPx,H-20);ctx.stroke();
+ctx.fillStyle=cs.getPropertyValue('--fg-dim').trim()||'#7a8199';
+ctx.font='11px Inter,sans-serif';ctx.fillText(barFt+' ft',20,H-26);
+
+const rawColors=['#3b82f6','#ef4444','#a855f7','#f97316'];
+let maxT=0;
+simData.trajectories.forEach(t=>{const last=t.trajectory[t.trajectory.length-1];if(last&&last.t>maxT)maxT=last.t});
+const cutoffT=maxT*fraction;
+document.getElementById('timeDisplay').textContent=cutoffT.toFixed(2)+'s';
+
+// Helper: draw a closed polygon from arrays of x,y
+function drawPoly(xs,ys,fill,stroke,lw){
+  if(!xs||xs.length<3)return;
+  ctx.beginPath();
+  ctx.moveTo(tx(xs[0]),ty(ys[0]));
+  for(let i=1;i<xs.length;i++)ctx.lineTo(tx(xs[i]),ty(ys[i]));
+  ctx.closePath();
+  if(fill){ctx.fillStyle=fill;ctx.fill()}
+  if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=lw||1.5;ctx.stroke()}
+}
+
+simData.trajectories.forEach((t,vi)=>{
+  const pts=t.trajectory.filter(p=>p.t<=cutoffT);
+  if(pts.length<2)return;
+  const color=rawColors[vi]||rawColors[0];
+  const hasGeometry=t.geometry&&t.geometry.length>0;
+
+  // 1. Draw CG trajectory path (fading trail)
+  for(let j=1;j<pts.length;j++){
+    const alpha=.15+.85*(j/pts.length);
+    ctx.strokeStyle=color+Math.round(alpha*255).toString(16).padStart(2,'0');
+    ctx.lineWidth=2;ctx.beginPath();
+    ctx.moveTo(tx(pts[j-1].x),ty(pts[j-1].y));
+    ctx.lineTo(tx(pts[j].x),ty(pts[j].y));ctx.stroke();
+  }
+
+  // 2. Draw start marker
+  ctx.fillStyle=color;ctx.beginPath();
+  ctx.arc(tx(pts[0].x),ty(pts[0].y),5,0,Math.PI*2);ctx.fill();
+
+  // 3. Draw vehicle at current position
+  const cur=pts[pts.length-1];
+
+  if(hasGeometry){
+    // Find the geometry frame closest to cutoffT
+    let gFrame=t.geometry[0];
+    for(const g of t.geometry){if(g.t!=null&&g.t<=cutoffT)gFrame=g;else if(g.t!=null&&g.t>cutoffT)break}
+
+    // Draw ghost outlines at intervals (every ~20% of time)
+    const ghostCount=5;
+    const ghostStep=Math.max(1,Math.floor(t.geometry.length/ghostCount));
+    for(let gi=0;gi<t.geometry.length;gi+=ghostStep){
+      const gg=t.geometry[gi];
+      if(gg.t!=null&&gg.t>cutoffT)break;
+      if(gg===gFrame)continue;
+      if(gg.body){
+        const ga=0.12;
+        drawPoly(gg.body.x,gg.body.y,color+Math.round(ga*255).toString(16).padStart(2,'0'),color+'30',1);
+      }
+    }
+
+    // Draw current vehicle body outline
+    if(gFrame.body){
+      drawPoly(gFrame.body.x,gFrame.body.y,color+'40',color,2.5);
+    }
+
+    // Draw 4 wheels
+    if(gFrame.wheels){
+      for(const[wname,wdata]of Object.entries(gFrame.wheels)){
+        drawPoly(wdata.x,wdata.y,color+'90',color,1.5);
+      }
+    }
+
+    // Draw CG dot
+    if(gFrame.cg){
+      ctx.fillStyle='#ffffff';ctx.beginPath();
+      ctx.arc(tx(gFrame.cg.x),ty(gFrame.cg.y),3,0,Math.PI*2);ctx.fill();
+      ctx.strokeStyle=color;ctx.lineWidth=1;ctx.stroke();
+    }
+
+    // Draw velocity vector from CG
+    if(gFrame.cg&&cur.vx!=null&&cur.vy!=null){
+      const vScale=0.3;
+      const vxPx=cur.vx*vScale*scale/10;
+      const vyPx=-cur.vy*vScale*scale/10;
+      const cgPx=tx(gFrame.cg.x),cgPy=ty(gFrame.cg.y);
+      ctx.strokeStyle=color;ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(cgPx,cgPy);ctx.lineTo(cgPx+vxPx,cgPy+vyPx);ctx.stroke();
+      // Arrowhead
+      const ang=Math.atan2(vyPx,vxPx);const aLen=8;
+      ctx.fillStyle=color;ctx.beginPath();
+      ctx.moveTo(cgPx+vxPx,cgPy+vyPx);
+      ctx.lineTo(cgPx+vxPx-aLen*Math.cos(ang-0.4),cgPy+vyPx-aLen*Math.sin(ang-0.4));
+      ctx.lineTo(cgPx+vxPx-aLen*Math.cos(ang+0.4),cgPy+vyPx-aLen*Math.sin(ang+0.4));
+      ctx.closePath();ctx.fill();
+    }
+  } else {
+    // Fallback: draw simple rectangle (no geometry data)
+    const dims=t.dimensions||{};
+    const vehL=(dims.length_ft||14)*scale;
+    const vehW=(dims.width_ft||6)*scale;
+    const headRad=-cur.heading*Math.PI/180;
+    ctx.save();ctx.translate(tx(cur.x),ty(cur.y));ctx.rotate(headRad);
+    ctx.fillStyle=color+'55';ctx.strokeStyle=color;ctx.lineWidth=2;
+    ctx.beginPath();ctx.rect(-vehL/2,-vehW/2,vehL,vehW);ctx.fill();ctx.stroke();
+    // Direction arrow
+    ctx.fillStyle=color;ctx.beginPath();
+    ctx.moveTo(vehL/2,0);ctx.lineTo(vehL/2-8,-5);ctx.lineTo(vehL/2-8,5);ctx.closePath();ctx.fill();
+    ctx.restore();
+  }
+
+  // 4. Speed label
+  ctx.fillStyle=color;ctx.font='bold 12px Space Grotesk,sans-serif';
+  ctx.fillText(cur.speed_mph.toFixed(0)+' mph',tx(cur.x)+15,ty(cur.y)-15);
+
+  // 5. Vehicle name label at start position
+  ctx.fillStyle=color+'cc';ctx.font='11px Inter,sans-serif';
+  ctx.fillText((t.vehicle_name||'V'+(vi+1)),tx(pts[0].x)+8,ty(pts[0].y)+16);
+});
+}
 function togglePlayback(){if(isPlaying){stopPlayback()}else{isPlaying=true;document.getElementById('playBtn').textContent='Pause';playT=0;const slider=document.getElementById('timeSlider');function step(){playT+=.5;if(playT>100){stopPlayback();return}slider.value=playT;drawTrajectories(playT/100);animFrame=requestAnimationFrame(step)}animFrame=requestAnimationFrame(step)}}
 function stopPlayback(){isPlaying=false;document.getElementById('playBtn').textContent='Play';if(animFrame){cancelAnimationFrame(animFrame);animFrame=null}}
 function exportResults(){if(!simData)return;const blob=new Blob([JSON.stringify(simData,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='crashrecon_simulation_'+sessionId+'.json';a.click();URL.revokeObjectURL(url)}
