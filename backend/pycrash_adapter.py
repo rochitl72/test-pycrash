@@ -277,7 +277,7 @@ def convert_vehicle(parsed_veh: dict, vehicle_index: int = 0) -> dict:
                 gaps.append(key)
 
     # ─── Time inputs from sequences ───
-    time_inputs = _build_time_inputs(seq)
+    time_inputs = _build_time_inputs(seq, float(pycrash_input.get("steer_ratio", 15.0)))
 
     # ─── Dropdowns for user selection ───
     dropdowns = {}
@@ -436,9 +436,12 @@ def _extract_make_model(name: str) -> tuple[str, str]:
     return clean, ""
 
 
-def _build_time_inputs(seq: dict) -> dict:
+def _build_time_inputs(seq: dict, steer_ratio: float = 1.0) -> dict:
     """
     Convert PC-Crash BRAKE/STEERING sequences into pycrash time_inputs arrays.
+    PC-Crash gives the ROAD-WHEEL angle of axle 1; pycrash takes the STEERING-WHEEL angle
+    and divides by steer_ratio (vehicle.py: delta_deg = steer / steer_ratio), so the
+    value passed on is wheel_angle * steer_ratio.
     Returns {time: [...], throttle: [...], brake: [...], steer: [...]}
     """
     if not seq or "actions" not in seq:
@@ -492,7 +495,7 @@ def _build_time_inputs(seq: dict) -> dict:
 
         elif atype == "steering":
             duration = action.get("steering_time", 0.5)
-            new_angle = action.get("new_steering_angle_axle_1", 0)
+            new_angle = action.get("new_steering_angle_axle_1", 0) * steer_ratio
 
             t += duration
             time_points.append(round(t, 3))

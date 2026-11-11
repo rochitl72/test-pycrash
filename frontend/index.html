@@ -111,6 +111,25 @@ h1,h2,h3,h4{font-family:'Space Grotesk','Inter',sans-serif;line-height:1.2}
 <button class="sample-btn" id="sampleBtn" onclick="event.stopPropagation()">Load Sample File</button>
 </div>
 </div>
+<div class="card" id="scenarioCard">
+<div class="card-title"><span class="icon">&#x1F1EE;&#x1F1F3;</span>Build an Indian Crash Scenario (no PC-Crash file needed)</div>
+<p style="font-size:13px;color:var(--fg-dim);margin-bottom:14px">Pick a preset accident scene, or build your own from the Indian vehicle database with explicit crash variables — impact speed, friction, restitution, mass (laden/unladen).</p>
+<div id="sceneBtns" style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:18px"></div>
+<div style="border-top:1px dashed var(--border);padding-top:14px">
+<div style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--fg-dim);margin-bottom:10px">Custom scenario</div>
+<div class="dropdown-grid" id="customGrid">
+<div class="dropdown-group"><label>Vehicle 1 (moving)</label><select id="cv1"></select></div>
+<div class="dropdown-group"><label>V1 speed (km/h)</label><input type="number" id="cs1" value="60" min="5" max="150" style="width:100%;padding:8px 10px;background:var(--bg);color:var(--fg);border:1px solid var(--border-accent);border-radius:var(--radius-sm);font-size:13px"></div>
+<div class="dropdown-group"><label>Vehicle 2</label><select id="cv2"></select></div>
+<div class="dropdown-group"><label>V2 speed (km/h)</label><input type="number" id="cs2" value="10" min="0" max="150" style="width:100%;padding:8px 10px;background:var(--bg);color:var(--fg);border:1px solid var(--border-accent);border-radius:var(--radius-sm);font-size:13px"></div>
+<div class="dropdown-group"><label>Collision type</label><select id="ctype"><option value="rear">Rear-end</option><option value="head">Head-on</option><option value="tbone">T-bone (V2 crosses)</option></select></div>
+<div class="dropdown-group"><label>Restitution (bounce)</label><select id="ccor"><option>0.1</option><option selected>0.15</option><option>0.2</option><option>0.3</option></select></div>
+<div class="dropdown-group"><label>Inter-vehicle friction</label><select id="cmu"><option>0.3</option><option selected>0.45</option><option>0.6</option></select></div>
+<div class="dropdown-group"><label>V2 load</label><select id="cload"><option value="0">Unladen</option><option value="1">Laden (typical)</option></select></div>
+</div>
+<button class="btn btn-primary" style="margin-top:14px" onclick="runCustomScenario()">Simulate Custom Scenario &#x2192;</button>
+</div>
+</div>
 </div>
 <div id="panelReview" hidden>
 <div class="card"><div class="card-title"><span class="icon">&#x1F916;</span>AI Scene Description</div><div class="scene-text" id="sceneDesc"></div></div>
@@ -130,8 +149,20 @@ h1,h2,h3,h4{font-family:'Space Grotesk','Inter',sans-serif;line-height:1.2}
 <div class="sim-controls">
 <button class="btn btn-secondary" id="playBtn" onclick="togglePlayback()">&#x25B6; Play</button>
 <input type="range" id="timeSlider" min="0" max="100" value="100">
+<button class="btn btn-secondary" id="impactBtn" onclick="jumpToImpact()" hidden>&#x26A1; Impact</button>
 <span class="sim-time" id="timeDisplay">0.00s</span>
-<select id="camMode" title="Camera" style="padding:6px 8px;background:var(--bg);color:var(--fg);border:1px solid var(--border-accent);border-radius:6px;font-size:12px" onchange="drawTrajectories(document.getElementById('timeSlider').value/100)"><option value="0">Close-up: Vehicle 1</option><option value="1">Close-up: Vehicle 2</option><option value="both">Both vehicles</option><option value="all">Full path</option></select>
+<select id="camMode" title="Camera" style="padding:6px 8px;background:var(--bg);color:var(--fg);border:1px solid var(--border-accent);border-radius:6px;font-size:12px" onchange="drawTrajectories(document.getElementById('timeSlider').value/100)"><option value="impact">Close-up: Impact</option><option value="0">Close-up: Vehicle 1</option><option value="1">Close-up: Vehicle 2</option><option value="both">Both vehicles</option><option value="all">Full path</option></select>
+</div>
+</div>
+</div>
+<div class="card" id="card3d">
+<div class="card-title"><span class="icon">&#x1F3AC;</span>3D Reconstruction</div>
+<div class="sim-canvas-wrap">
+<div id="view3dWrap" style="width:100%;height:500px"></div>
+<div class="sim-controls">
+<select id="cam3d" style="padding:6px 8px;background:var(--bg);color:var(--fg);border:1px solid var(--border-accent);border-radius:6px;font-size:12px"><option value="orbit">Orbit (drag to rotate)</option><option value="chase0">Chase: Vehicle 1</option><option value="chase1">Chase: Vehicle 2</option><option value="top">Top-down</option><option value="impactcam">Impact camera</option></select>
+<button class="btn btn-secondary" onclick="record3D()" id="rec3dBtn">&#x1F534; Record Video</button>
+<span class="sim-time" id="rec3dStatus" style="flex:1"></span>
 </div>
 </div>
 </div>
@@ -142,13 +173,14 @@ h1,h2,h3,h4{font-family:'Space Grotesk','Inter',sans-serif;line-height:1.2}
 </div>
 </div>
 </div>
-<div class="footer">CrashRecon — Open-source accident reconstruction for Indian road safety officers<br>Built with pycrash · FastAPI · Groq AI</div>
+<div class="footer">CrashRecon — Open-source accident reconstruction for Indian road safety officers<br>Built with pycrash · FastAPI · Groq AI<br><span style="font-size:11px">3D model credit: "Indian car scorpio 3d model for free" by <a href="https://sketchfab.com/Gouravsuthar" target="_blank" rel="noopener">Gouravsuthar</a> (<a href="https://sketchfab.com/3d-models/indian-car-scorpio-3d-model-for-free-4905188a9985423db9c9b67ec97a7c29" target="_blank" rel="noopener">Sketchfab</a>), licensed <a href="http://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC-BY-4.0</a>; simplified for web use.</span></div>
 <div class="loading-overlay" id="loadingOverlay" hidden><div class="loading-box"><div class="spinner"></div><p id="loadingText">Processing...</p></div></div>
 <div class="toast" id="toast"></div>
+<script src="/static/three.bundle.js"></script>
 <script>
 let sessionId=null,uploadData=null,simData=null,animFrame=null,isPlaying=false,playT=0;
 const API='';
-window.addEventListener('DOMContentLoaded',()=>{checkHealth();setupUpload()});
+window.addEventListener('DOMContentLoaded',()=>{checkHealth();setupUpload();loadCatalog()});
 async function checkHealth(){try{const r=await fetch(API+'/api/health');const d=await r.json();document.getElementById('dotPycrash').className='dot '+(d.pycrash_available?'dot-ok':'dot-off');document.getElementById('dotGroq').className='dot '+(d.groq_configured?'dot-ok':'dot-warn')}catch(e){console.error('Health check failed',e)}}
 function setupUpload(){const zone=document.getElementById('uploadZone');const input=document.getElementById('fileInput');zone.addEventListener('click',()=>input.click());zone.addEventListener('dragover',e=>{e.preventDefault();zone.classList.add('dragover')});zone.addEventListener('dragleave',()=>zone.classList.remove('dragover'));zone.addEventListener('drop',e=>{e.preventDefault();zone.classList.remove('dragover');if(e.dataTransfer.files.length)uploadFile(e.dataTransfer.files[0])});input.addEventListener('change',()=>{if(input.files.length)uploadFile(input.files[0])});document.getElementById('sampleBtn').addEventListener('click',loadSample)}
 async function loadSample(){showLoading('Loading sample PC-Crash file...');try{const r=await fetch(API+'/api/sample');if(!r.ok){toast('No sample file available on server','error');hideLoading();return}const blob=await r.blob();const file=new File([blob],'sample_1.txt',{type:'text/plain'});await uploadFile(file)}catch(e){toast('Failed to load sample: '+e.message,'error');hideLoading()}}
@@ -162,9 +194,10 @@ let txt=sd.description||'';
 if(sd.assumptions&&sd.assumptions.length){txt+='\n\nAssumptions:\n'+sd.assumptions.map(a=>'  • '+a).join('\n')}
 if(sd.missing_items&&sd.missing_items.length){txt+='\n\nMissing data:\n'+sd.missing_items.map(m=>'  • '+m).join('\n')}
 if(sd.warnings&&sd.warnings.length){txt+='\n\nWarnings:\n'+sd.warnings.map(w=>'  ⚠ '+w).join('\n')}
-el.textContent=txt})();const grid=document.getElementById('vehiclesGrid');grid.innerHTML='';const colors=['var(--veh1)','var(--veh2)','#a855f7','#f97316'];uploadData.converted_vehicles.forEach((v,i)=>{const card=document.createElement('div');card.className='vehicle-card';const pi=v.pycrash_input;const fs=v.field_sources||{};const keyParams=[['Year',pi.year,fs.year],['Make / Model',(pi.vehmake||'?')+' '+(pi.vehmodel||'?'),'parsed'],['Weight (lb)',num(pi.weight),fs.weight],['Length (ft)',num(pi.length),fs.length],['Width (ft)',num(pi.width),fs.width],['Wheelbase (ft)',num(pi.wb),fs.wb],['CG Height (ft)',num(pi.hcg),fs.hcg],['Izz (lb ft s2)',num(pi.izz),fs.izz],['Initial Vx (mph)',num(pi.vx_initial),fs.vx_initial],['Heading (deg)',num(pi.head_angle),fs.head_angle]];let rows=keyParams.map(([label,val,src])=>{const s=(src&&typeof src==='object')?src.source:String(src||'');const srcClass=s==='parsed'?'source-parsed':s==='default'?'source-default':'source-user';const srcLabel=s==='parsed'?'FILE':s==='default'?'DEFAULT':s?s.toUpperCase():'';return '<tr><td>'+label+'</td><td>'+val+' <span class="source-tag '+srcClass+'">'+srcLabel+'</span></td></tr>'}).join('');let gapsHtml='';if(v.gaps&&v.gaps.length){gapsHtml='<div class="gap-list">'+v.gaps.map(g=>'<span class="gap-chip">'+(typeof g==='object'?g.field||JSON.stringify(g):g)+'</span>').join('')+'</div>'}card.innerHTML='<h4><span class="veh-dot" style="background:'+colors[i]+'"></span>Vehicle '+(i+1)+': '+(pi.vehmake||'Unknown')+' '+(pi.vehmodel||'')+'</h4><table class="params-table">'+rows+'</table>'+gapsHtml;grid.appendChild(card)});const dg=document.getElementById('dropdownGrid');dg.innerHTML='';const dropdowns=uploadData.dropdowns||{};for(const[field,cfg]of Object.entries(dropdowns)){const group=document.createElement('div');group.className='dropdown-group';const label=cfg.label||field.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase());const opts=Array.isArray(cfg)?cfg:(cfg.options||[]);group.innerHTML='<label>'+label+'</label><select data-field="'+field+'">'+opts.map((o,i)=>'<option value="'+o+'"'+(i===0?' selected':'')+'>'+o+'</option>').join('')+'</select>';dg.appendChild(group)}}
-async function runSimulation(){if(!sessionId)return;const selects=document.querySelectorAll('#dropdownGrid select');const selections={};selects.forEach(s=>{selections[s.dataset.field]=s.value});showLoading('Saving selections...');try{await fetch(API+'/api/selections',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_id:sessionId,selections})})}catch(e){}showLoading('Running pycrash simulation...');try{const r=await fetch(API+'/api/simulate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_id:sessionId})});if(!r.ok){const err=await r.json().catch(()=>({}));throw new Error(err.detail||'Simulation failed')}simData=await r.json();renderSimulation();showPanel('sim');toast('Simulation complete - '+simData.model_used.replace('_',' '),'success')}catch(e){toast(e.message,'error')}hideLoading()}
-function renderSimulation(){if(!simData||!simData.trajectories.length)return;const rawColors=['#3b82f6','#ef4444','#a855f7','#f97316'];const legend=document.getElementById('simLegend');legend.innerHTML=simData.trajectories.map((t,i)=>'<span><span class="leg-dot" style="background:'+rawColors[i]+'"></span>'+(t.vehicle_name||'Vehicle '+(i+1))+' ('+t.model+')</span>').join('');const stats=document.getElementById('simStats');stats.innerHTML=simData.trajectories.map((t,i)=>{const traj=t.trajectory;if(!traj.length)return'';const maxSpeed=Math.max(...traj.map(p=>p.speed_mph));const finalSpeed=traj[traj.length-1].speed_mph;const duration=traj[traj.length-1].t;const dx=traj[traj.length-1].x-traj[0].x;const dy=traj[traj.length-1].y-traj[0].y;const dist=Math.sqrt(dx*dx+dy*dy);return '<div class="vehicle-card" style="margin-bottom:12px"><h4><span class="veh-dot" style="background:'+rawColors[i]+'"></span>'+(t.vehicle_name||'Vehicle '+(i+1))+'</h4><table class="params-table"><tr><td>Model</td><td>'+t.model+'</td></tr><tr><td>Duration</td><td>'+duration.toFixed(2)+' s</td></tr><tr><td>Max Speed</td><td>'+maxSpeed.toFixed(1)+' mph</td></tr><tr><td>Final Speed</td><td>'+finalSpeed.toFixed(1)+' mph</td></tr><tr><td>Distance Traveled</td><td>'+dist.toFixed(1)+' ft</td></tr><tr><td>Trajectory Points</td><td>'+traj.length+'</td></tr></table></div>'}).join('');drawTrajectories(1.0);const slider=document.getElementById('timeSlider');slider.value=100;slider.oninput=()=>{drawTrajectories(slider.value/100);stopPlayback()}}
+el.textContent=txt})();const grid=document.getElementById('vehiclesGrid');grid.innerHTML='';const colors=['var(--veh1)','var(--veh2)','#a855f7','#f97316'];uploadData.converted_vehicles.forEach((v,i)=>{const card=document.createElement('div');card.className='vehicle-card';const pi=v.pycrash_input;const fs=v.field_sources||{};const keyParams=[['Year',pi.year,fs.year],['Make / Model',(pi.vehmake||'?')+' '+(pi.vehmodel||'?'),'parsed'],['Weight (lb)',num(pi.weight),fs.weight],['Length (ft)',num(pi.length),fs.length],['Width (ft)',num(pi.width),fs.width],['Wheelbase (ft)',num(pi.wb),fs.wb],['CG Height (ft)',num(pi.hcg),fs.hcg],['Izz (lb ft s2)',num(pi.izz),fs.izz],['Initial Vx (mph)',num(pi.vx_initial),fs.vx_initial],['Heading (deg)',num(pi.head_angle),fs.head_angle]];let rows=keyParams.map(([label,val,src])=>{const s=(src&&typeof src==='object')?src.source:String(src||'');const srcClass=s==='parsed'?'source-parsed':s==='default'?'source-default':'source-user';const srcLabel=s==='parsed'?'FILE':s==='default'?'DEFAULT':s?s.toUpperCase():'';return '<tr><td>'+label+'</td><td>'+val+' <span class="source-tag '+srcClass+'">'+srcLabel+'</span></td></tr>'}).join('');let gapsHtml='';if(v.gaps&&v.gaps.length){gapsHtml='<div class="gap-list">'+v.gaps.map(g=>'<span class="gap-chip">'+(typeof g==='object'?g.field||JSON.stringify(g):g)+'</span>').join('')+'</div>'}card.innerHTML='<h4><span class="veh-dot" style="background:'+colors[i]+'"></span>Vehicle '+(i+1)+': '+(pi.vehmake||'Unknown')+' '+(pi.vehmodel||'')+'</h4><table class="params-table">'+rows+'</table>'+gapsHtml;grid.appendChild(card)});const dg=document.getElementById('dropdownGrid');dg.innerHTML='';const dropdowns=uploadData.dropdowns||{};document.getElementById('dropdownCard').hidden=!Object.keys(dropdowns).length;for(const[field,cfg]of Object.entries(dropdowns)){const group=document.createElement('div');group.className='dropdown-group';const label=cfg.label||field.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase());const opts=Array.isArray(cfg)?cfg:(cfg.options||[]);group.innerHTML='<label>'+label+'</label><select data-field="'+field+'">'+opts.map((o,i)=>'<option value="'+o+'"'+(i===0?' selected':'')+'>'+o+'</option>').join('')+'</select>';dg.appendChild(group)}}
+async function runSimulation(){if(!sessionId)return;const selects=document.querySelectorAll('#dropdownGrid select');const selections={};selects.forEach(s=>{selections[s.dataset.field]=s.value});showLoading('Saving selections...');try{await fetch(API+'/api/selections',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_id:sessionId,selections})})}catch(e){}showLoading('Running pycrash simulation...');try{const r=await fetch(API+'/api/simulate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_id:sessionId})});if(!r.ok){const err=await r.json().catch(()=>({}));throw new Error(err.detail||'Simulation failed')}simData=await r.json();renderSimulation();showPanel('sim');requestAnimationFrame(()=>window.dispatchEvent(new Event('resize')));toast('Simulation complete - '+simData.model_used.replace('_',' '),'success')}catch(e){toast(e.message,'error')}hideLoading()}
+function renderSimulation(){if(!simData||!simData.trajectories.length)return;const rawColors=['#3b82f6','#ef4444','#a855f7','#f97316'];const legend=document.getElementById('simLegend');legend.innerHTML=simData.trajectories.map((t,i)=>'<span><span class="leg-dot" style="background:'+rawColors[i]+'"></span>'+(t.vehicle_name||'Vehicle '+(i+1))+' ('+t.model+')</span>').join('');const stats=document.getElementById('simStats');stats.innerHTML=impactCardHtml()+simData.trajectories.map((t,i)=>{const traj=t.trajectory;if(!traj.length)return'';const maxSpeed=Math.max(...traj.map(p=>p.speed_mph));const finalSpeed=traj[traj.length-1].speed_mph;const duration=traj[traj.length-1].t;const dx=traj[traj.length-1].x-traj[0].x;const dy=traj[traj.length-1].y-traj[0].y;const dist=Math.sqrt(dx*dx+dy*dy);return '<div class="vehicle-card" style="margin-bottom:12px"><h4><span class="veh-dot" style="background:'+rawColors[i]+'"></span>'+(t.vehicle_name||'Vehicle '+(i+1))+'</h4><table class="params-table"><tr><td>Model</td><td>'+t.model+'</td></tr><tr><td>Duration</td><td>'+duration.toFixed(2)+' s</td></tr><tr><td>Max Speed</td><td>'+maxSpeed.toFixed(1)+' mph</td></tr><tr><td>Final Speed</td><td>'+finalSpeed.toFixed(1)+' mph</td></tr><tr><td>Distance Traveled</td><td>'+dist.toFixed(1)+' ft</td></tr><tr><td>Trajectory Points</td><td>'+traj.length+'</td></tr></table></div>'}).join('');try{init3D()}catch(e){console.warn('3D init failed',e);document.getElementById('card3d').hidden=true}
+const slider=document.getElementById('timeSlider');const hasImpact=!!(simData.impact&&simData.impact.detected&&simData.impact.point);document.getElementById('impactBtn').hidden=!hasImpact;document.getElementById('camMode').value=hasImpact?'impact':'0';if(hasImpact){jumpToImpact()}else{slider.value=100;drawTrajectories(1.0)}slider.oninput=()=>{drawTrajectories(slider.value/100);stopPlayback()}}
 function drawTrajectories(fraction){
 const canvas=document.getElementById('simCanvas');
 const ctx=canvas.getContext('2d');
@@ -182,7 +215,11 @@ const camEl=document.getElementById('camMode');
 let cam=camEl?camEl.value:'all';
 function frameAt(t,c){let f=t.geometry[0];for(const g of t.geometry){if(g.t!=null&&g.t<=c)f=g;else if(g.t!=null&&g.t>c)break}return f}
 let allX=[],allY=[];
-if(cam!=='all'){
+if(cam==='impact'){
+  const im=simData.impact;
+  if(im&&im.detected&&im.point){allX=[im.point.x-14,im.point.x+14];allY=[im.point.y-14,im.point.y+14]}else cam='0';
+}
+if(cam!=='all'&&cam!=='impact'){
   simData.trajectories.forEach((t,vi)=>{
     if(cam!=='both'&&String(vi)!==cam)return;
     if(!t.geometry||!t.geometry.length)return;
@@ -322,6 +359,20 @@ function drawVehicleShape(f,color,truck){
   }
 }
 
+// Impact marker: starburst at the point of first contact once the animation reaches it
+const IM=simData.impact;
+if(IM&&IM.detected&&IM.point&&cutoffT>=IM.t){
+  const cx=tx(IM.point.x),cy=ty(IM.point.y),R=Math.max(14,2.6*scale);
+  ctx.save();ctx.translate(cx,cy);
+  ctx.beginPath();
+  for(let k=0;k<16;k++){const r=k%2?R*0.5:R,a=k*Math.PI/8;ctx.lineTo(r*Math.cos(a),r*Math.sin(a))}
+  ctx.closePath();ctx.fillStyle='rgba(250,204,21,.35)';ctx.fill();
+  ctx.strokeStyle='#facc15';ctx.lineWidth=2;ctx.stroke();
+  ctx.restore();
+  ctx.fillStyle='#facc15';ctx.font='bold 12px Space Grotesk,sans-serif';
+  ctx.fillText('IMPACT  t='+IM.t.toFixed(2)+'s',cx+R+6,cy-R*0.6);
+}
+
 simData.trajectories.forEach((t,vi)=>{
   const pts=t.trajectory.filter(p=>p.t<=cutoffT);
   if(pts.length<2)return;
@@ -412,7 +463,14 @@ simData.trajectories.forEach((t,vi)=>{
   ctx.fillStyle=color+'cc';ctx.font='11px Inter,sans-serif';
   ctx.fillText((t.vehicle_name||'V'+(vi+1)),tx(pts[0].x)+8,ty(pts[0].y)+16);
 });
+if(window.sync3D&&T3&&T3.ok){try{sync3D(cutoffT)}catch(e){console.warn('3D sync',e)}}
 }
+function simMaxT(){let m=0;simData.trajectories.forEach(t=>{const l=t.trajectory[t.trajectory.length-1];if(l&&l.t>m)m=l.t});return m||1}
+function jumpToImpact(){if(!simData||!simData.impact||!simData.impact.detected)return;stopPlayback();const f=Math.min(1,(simData.impact.t+0.25)/simMaxT());const sl=document.getElementById('timeSlider');sl.value=Math.round(f*100);drawTrajectories(f)}
+function impactCardHtml(){const im=simData.impact;if(!im)return'';if(!im.detected){return '<div class="vehicle-card" style="margin-bottom:12px"><h4>&#x26A0;&#xFE0F; No collision detected</h4><p style="font-size:13px;color:var(--fg-dim)">'+(im.message||im.error||'The vehicle bodies do not overlap in the simulated time.')+'</p></div>'}
+if(im.error){return '<div class="vehicle-card" style="margin-bottom:12px"><h4>&#x26A1; Contact found at '+im.t.toFixed(2)+' s</h4><p style="font-size:13px;color:var(--danger)">Impact model failed: '+im.error+'</p></div>'}
+const rows=im.speeds.map(s=>'<tr><td>'+s.vehicle_id.toUpperCase()+' ('+s.role+')</td><td>'+s.before_mph+' &rarr; '+s.after_mph+' mph &nbsp; (&Delta;v '+s.delta_v_mph+')</td></tr>').join('');
+return '<div class="vehicle-card" style="margin-bottom:12px;border-color:#facc15"><h4>&#x26A1; Collision at '+im.t.toFixed(2)+' s</h4><table class="params-table"><tr><td>Striking</td><td>'+im.striking_name+'</td></tr><tr><td>Struck</td><td>'+im.struck_name+' ('+im.struck_edge+')</td></tr>'+rows+'<tr><td>Model</td><td>'+im.model+'</td></tr><tr><td>Restitution / friction</td><td>'+im.restitution+' / '+im.vehicle_friction+'</td></tr></table></div>'}
 function togglePlayback(){if(isPlaying){stopPlayback()}else{isPlaying=true;document.getElementById('playBtn').textContent='Pause';playT=0;const slider=document.getElementById('timeSlider');function step(){playT+=.5;if(playT>100){stopPlayback();return}slider.value=playT;drawTrajectories(playT/100);animFrame=requestAnimationFrame(step)}animFrame=requestAnimationFrame(step)}}
 function stopPlayback(){isPlaying=false;document.getElementById('playBtn').textContent='Play';if(animFrame){cancelAnimationFrame(animFrame);animFrame=null}}
 function exportResults(){if(!simData)return;const blob=new Blob([JSON.stringify(simData,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='crashrecon_simulation_'+sessionId+'.json';a.click();URL.revokeObjectURL(url)}
@@ -422,7 +480,256 @@ function num(v){if(v==null)return'—';return typeof v==='number'?v.toFixed(2):v
 function showLoading(text){document.getElementById('loadingText').textContent=text||'Processing...';document.getElementById('loadingOverlay').hidden=false}
 function hideLoading(){document.getElementById('loadingOverlay').hidden=true}
 function toast(msg,type){const el=document.getElementById('toast');el.textContent=msg;el.className='toast toast-'+(type||'success');requestAnimationFrame(()=>el.classList.add('show'));setTimeout(()=>el.classList.remove('show'),3500)}
-window.addEventListener('resize',()=>{if(simData){drawTrajectories(document.getElementById('timeSlider').value/100)}});
+window.addEventListener('resize',()=>{if(simData){drawTrajectories(document.getElementById('timeSlider').value/100)}if(T3&&T3.ok){const w=T3.wrap.clientWidth,h=T3.wrap.clientHeight;T3.camera.aspect=w/h;T3.camera.updateProjectionMatrix();T3.renderer.setSize(w,h);sync3D(T3.lastT)}});
+
+// ================= INDIAN SCENARIO BUILDER =================
+let catalogData=null;
+async function loadCatalog(){try{const r=await fetch(API+'/api/vehicles');if(!r.ok)return;catalogData=await r.json();
+const sb=document.getElementById('sceneBtns');sb.innerHTML='';
+catalogData.scenes.forEach(sc=>{const b=document.createElement('button');b.className='sample-btn';b.style.cssText='margin-top:0;text-align:left;max-width:330px';b.innerHTML='<b>'+sc.label+'</b><br><span style="font-size:11px;color:var(--fg-dim)">'+sc.description.slice(0,95)+'&hellip;</span>';b.onclick=()=>runPresetScene(sc.id);sb.appendChild(b)});
+const o=catalogData.vehicles.map(v=>'<option value="'+v.id+'">'+v.label+'</option>').join('');
+const c1=document.getElementById('cv1'),c2=document.getElementById('cv2');c1.innerHTML=o;c2.innerHTML=o;c1.value='honda_city';c2.value='eicher_1095';
+}catch(e){console.warn('catalog',e)}}
+async function postScenario(body,msg){showLoading(msg);
+try{const r=await fetch(API+'/api/scenario',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.detail||'Scenario failed')}
+uploadData=await r.json();sessionId=uploadData.session_id;renderReview();showPanel('review');toast('Scenario ready - run the simulation','success')}catch(e){toast(e.message,'error')}hideLoading()}
+function runPresetScene(id){postScenario({scene_id:id},'Building Indian accident scene...')}
+function runCustomScenario(){
+const v1=document.getElementById('cv1').value,v2=document.getElementById('cv2').value;
+const s1=+document.getElementById('cs1').value||0,s2=+document.getElementById('cs2').value||0;
+const type=document.getElementById('ctype').value,ms=k=>k/3.6,tLead=1.3;
+let veh2={vehicle_id:v2,speed_kmh:s2,heading_deg:0,x_m:0,y_m:0,loaded:document.getElementById('cload').value==='1'};
+if(type==='rear'){veh2.x_m=Math.max(10,(ms(s1)-ms(s2))*tLead+6);veh2.y_m=0.2}
+else if(type==='head'){veh2.heading_deg=180;veh2.x_m=Math.max(14,(ms(s1)+ms(s2))*tLead+6);veh2.y_m=0.3}
+else{veh2.heading_deg=90;veh2.x_m=Math.max(8,ms(s1)*tLead);veh2.y_m=-Math.max(4,ms(s2)*tLead)}
+postScenario({vehicles:[{vehicle_id:v1,speed_kmh:s1,heading_deg:0,x_m:0,y_m:0,brake:{t_start:1.0,t_full:1.3,level:0.8}},veh2],
+cor:+document.getElementById('ccor').value,vehicle_mu:+document.getElementById('cmu').value},'Building custom scenario...')}
+
+// ================= 3D RECONSTRUCTION (three.js) =================
+let T3={ok:false};
+function veh3dStyle(t,idx){const r=t.render||{};let body=r.body,color=r.color;
+ if(!body){const L=(t.dimensions||{}).length_ft||14;const n=(t.vehicle_name||'').toLowerCase();
+  if(/bus/.test(n))body='bus';else if(/auto|rickshaw|\bre\b/.test(n))body='auto';else if(/splendor|bike|motor/.test(n))body='bike';
+  else if(L>=30)body='bus';else if(/eicher|407|truck|lorry|tipper/.test(n)||L>=20)body='truck';else if(L>=15)body='suv';else body='sedan'}
+ if(!color)color=['#3b82f6','#ef4444','#a855f7','#f97316'][idx]||'#3b82f6';
+ return {body,color}}
+/* --- 3D Model Loader with FBX support --- */
+const MODEL_MAP={
+ sedan:'sedan.fbx', hatchback:'hatchback.fbx', suv:'scorpio.glb',
+ bus:'bus.fbx', truck:'truck.fbx', mini_truck:'pickup.fbx',
+ pickup:'pickup.fbx', van:'van.fbx', auto:'van.fbx', bike:null
+};
+const loadedModels={};
+const fbxLoader=new THREE.FBXLoader();
+const gltfLoader=new THREE.GLTFLoader();
+const GLB_YAW={'scorpio.glb':-Math.PI/2}; /* model's forward axis -> sim +x */
+/* CC-BY: 'Indian car scorpio 3d model for free' by Gouravsuthar */
+function prepGLB(scene,L,W,color,file){
+ const root=new THREE.Group();const inner=scene.clone(true);inner.rotation.y=GLB_YAW[file]||0;root.add(inner);
+ inner.traverse(c=>{if(c.isMesh){c.castShadow=true;c.receiveShadow=true;const ms=Array.isArray(c.material)?c.material:[c.material];const out=ms.map(m=>{if(m&&m.name==='body_mat'){const n=m.clone();n.color=new THREE.Color(color);n.roughness=.45;n.metalness=.25;return n}return m});c.material=out.length===1?out[0]:out}});
+ scaleModelToFit(root,L,W);return root}
+
+function mkBox(w,h,d,color,opts){const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),new THREE.MeshStandardMaterial(Object.assign({color:color,roughness:.55,metalness:.15},opts||{})));m.castShadow=true;m.receiveShadow=true;return m}
+
+function colorizeModel(group,color){
+ group.traverse(child=>{
+  if(child.isMesh){
+   child.castShadow=true;child.receiveShadow=true;
+   const mats=Array.isArray(child.material)?child.material:[child.material];
+   child.material=mats.map(m=>{
+    const c=m.color?m.color.clone():new THREE.Color(0x888888);
+    const isGlass=c.r<0.15&&c.g<0.15&&c.b<0.15;
+    const isDark=c.r<0.2&&c.g<0.2&&c.b<0.2&&!isGlass;
+    if(isGlass) return new THREE.MeshStandardMaterial({color:0x0c1830,roughness:.12,metalness:.75,transparent:true,opacity:.85});
+    if(isDark) return new THREE.MeshStandardMaterial({color:c,roughness:.85,metalness:.1});
+    return new THREE.MeshStandardMaterial({color:new THREE.Color(color),roughness:.5,metalness:.2});
+   });
+   if(child.material.length===1) child.material=child.material[0];
+  }
+ });
+}
+
+function scaleModelToFit(group,targetL,targetW){
+ const box=new THREE.Box3().setFromObject(group);
+ const sz=box.getSize(new THREE.Vector3());
+ const maxDim=Math.max(sz.x,sz.z);
+ const scale=targetL/Math.max(maxDim,1);
+ group.scale.setScalar(scale);
+ const box2=new THREE.Box3().setFromObject(group);
+ const center=box2.getCenter(new THREE.Vector3());
+ group.position.sub(center);
+ group.position.y=-box2.min.y;
+}
+
+function buildFallbackMesh(t,idx){
+ const d=t.dimensions||{},st=veh3dStyle(t,idx);
+ const L=d.length_ft||14,W=d.width_ft||6,wb=d.wb_ft||L*.6,fh=d.f_hang_ft||L*.18,rh=d.r_hang_ft||L*.18;
+ const lcgf=d.lcgf_ft||wb/2,lcgr=wb-lcgf;
+ const tireD=Math.min(d.tire_d_ft||2.1,W*.62),tireR=tireD/2,tireW=Math.max(.45,W*.09);
+ const g=new THREE.Group();const front=lcgf+fh,rear=-(lcgr+rh),cx=(front+rear)/2;
+ const glass=new THREE.MeshStandardMaterial({color:0x0c1830,roughness:.12,metalness:.75});
+ const track=Math.max(d.track_ft||W*.85,W*.6);
+ function wheel(x,z){const w=new THREE.Mesh(new THREE.CylinderGeometry(tireR,tireR,tireW,14),new THREE.MeshStandardMaterial({color:0x0a0a0a,roughness:.92}));w.rotation.x=Math.PI/2;w.position.set(x,tireR,z);w.castShadow=true;g.add(w)}
+ if(st.body==='bike'){
+  const b=mkBox(L*.86,1.1,.55,st.color);b.position.set(cx,tireR+.5,0);g.add(b);
+  const rider=mkBox(1.4,2.3,1.0,0x1f2937);rider.position.set(cx-.2,tireR+2.1,0);g.add(rider);
+  wheel(lcgf,0);wheel(-lcgr,0);
+ }else{
+  const hBody=st.body==='suv'?2.6:2.0;
+  const b=mkBox(L*.98,hBody,W*.96,st.color);b.position.set(cx,tireR+hBody/2+.25,0);g.add(b);
+  const cabFront=lcgf*.55,cabRear=-lcgr*.9;
+  const cab=new THREE.Mesh(new THREE.BoxGeometry(cabFront-cabRear,1.75,W*.82),glass);
+  cab.castShadow=true;cab.position.set((cabFront+cabRear)/2,tireR+hBody+.2+.875-.12,0);g.add(cab);
+  wheel(lcgf,track/2);wheel(lcgf,-track/2);wheel(-lcgr,track/2);wheel(-lcgr,-track/2);
+ }
+ return g}
+
+/* Indian 3-wheeler (auto-rickshaw): procedural, front = +x */
+function buildAutoRickshaw(t,idx){
+ const d=t.dimensions||{},st=veh3dStyle(t,idx);
+ const L=d.length_ft||8.9,W=d.width_ft||4.6;
+ const g=new THREE.Group();
+ const body=new THREE.Color(st.color);
+ const R=1.0,tw=.45,x0=-L/2;
+ const blk=0x151515,glass=new THREE.MeshStandardMaterial({color:0x0c1830,roughness:.12,metalness:.75,transparent:true,opacity:.8});
+ function wheel(x,z){const w=new THREE.Mesh(new THREE.CylinderGeometry(R,R,tw,16),new THREE.MeshStandardMaterial({color:0x0a0a0a,roughness:.92}));w.rotation.x=Math.PI/2;w.position.set(x,R,z);w.castShadow=true;g.add(w)}
+ wheel(L*.36,0);wheel(-L*.3,W*.42);wheel(-L*.3,-W*.42);
+ /* lower body: yellow/green two-tone */
+ const low=mkBox(L*.78,1.5,W*.84,body);low.position.set(-L*.08,R+.55,0);g.add(low);
+ const nose=mkBox(L*.28,1.7,W*.5,body);nose.position.set(L*.34,R+.65,0);g.add(nose);
+ /* windscreen */
+ const ws=new THREE.Mesh(new THREE.BoxGeometry(.12,1.6,W*.8),glass);ws.position.set(L*.2,R+2.2,0);ws.rotation.z=-.25;g.add(ws);
+ /* black canvas roof + pillars */
+ const roof=mkBox(L*.62,.14,W*.9,blk);roof.position.set(-L*.12,R+3.1,0);g.add(roof);
+ [[L*.16,1],[L*.16,-1],[-L*.4,1],[-L*.4,-1]].forEach(p=>{const pl=mkBox(.12,1.7,.12,blk);pl.position.set(p[0],R+2.2,p[1]*W*.42);g.add(pl)});
+ /* rear canvas panel and seat */
+ const back=mkBox(.1,1.5,W*.84,blk);back.position.set(-L*.4,R+2.15,0);g.add(back);
+ const seat=mkBox(L*.22,.35,W*.7,0x3a2a1a);seat.position.set(-L*.22,R+1.5,0);g.add(seat);
+ /* handlebar + headlamp */
+ const hb=mkBox(.15,.15,W*.5,0x9ca3af);hb.position.set(L*.3,R+1.7,0);g.add(hb);
+ const lamp=mkBox(.15,.35,.35,0xfff3c4,{emissive:0x665a20});lamp.position.set(L*.49,R+1.2,0);g.add(lamp);
+ return g}
+
+function buildVehicleMesh(t,idx){
+ const d=t.dimensions||{},st=veh3dStyle(t,idx);
+ const L=d.length_ft||14,W=d.width_ft||6;
+ if(st.body==='auto')return buildAutoRickshaw(t,idx);
+ const modelFile=MODEL_MAP[st.body]||MODEL_MAP['sedan'];
+ const g=new THREE.Group();
+ if(!modelFile){return buildFallbackMesh(t,idx)}
+ if(/\.glb$/.test(modelFile)){
+  const placeholder=buildFallbackMesh(t,idx);g.add(placeholder);
+  const url='/static/models/'+modelFile;
+  const put=sc=>{g.remove(placeholder);g.add(prepGLB(sc,L,W,st.color,modelFile))};
+  if(loadedModels[url])put(loadedModels[url]);
+  else gltfLoader.load(url,gl=>{loadedModels[url]=gl.scene;put(gl.scene)},undefined,err=>console.warn('GLB load failed:',modelFile,err));
+  return g}
+ /* placeholder while FBX loads */
+ const placeholder=buildFallbackMesh(t,idx);
+ g.add(placeholder);
+ const url='/static/models/'+modelFile;
+ if(loadedModels[url]){
+  const clone=loadedModels[url].clone();
+  scaleModelToFit(clone,L,W);
+  colorizeModel(clone,st.color);
+  g.remove(placeholder);
+  g.add(clone);
+ }else{
+  fbxLoader.load(url,obj=>{
+   loadedModels[url]=obj;
+   const clone=obj.clone();
+   scaleModelToFit(clone,L,W);
+   colorizeModel(clone,st.color);
+   g.remove(placeholder);
+   g.add(clone);
+  },undefined,err=>{console.warn('FBX load failed:',modelFile,err)});
+ }
+ return g}
+function buildRoad(env,focus){
+ const g=new THREE.Group();
+ const ground=new THREE.Mesh(new THREE.PlaneGeometry(2400,2400),new THREE.MeshStandardMaterial({color:0x55613f,roughness:1}));
+ ground.rotation.x=-Math.PI/2;ground.position.y=-.08;ground.receiveShadow=true;g.add(ground);
+ function strip(lenX,widZ,x,z,col){const r=new THREE.Mesh(new THREE.PlaneGeometry(lenX,widZ),new THREE.MeshStandardMaterial({color:col||0x2b2f33,roughness:.95}));r.rotation.x=-Math.PI/2;r.position.set(x,0,z);r.receiveShadow=true;g.add(r)}
+ function dashes(alongX,fixed,col,gap){for(let p=-700;p<700;p+=(gap||26)){const d=new THREE.Mesh(new THREE.PlaneGeometry(alongX?9:.7,alongX?.7:9),new THREE.MeshBasicMaterial({color:col||0xe5e7eb}));d.rotation.x=-Math.PI/2;d.position.set(alongX?p:fixed,.03,alongX?fixed:p);g.add(d)}}
+ const rz=-(focus.y||0);
+ if(env==='rural_intersection'){strip(1600,26,0,rz);strip(26,1600,focus.x||0,0);dashes(true,rz,0xd6d3d1,34);dashes(false,focus.x||0,0xd6d3d1,34)}
+ else if(env==='urban'){strip(1600,46,0,rz,0x33373c);dashes(true,rz-7.5);dashes(true,rz+7.5);strip(1600,6,0,rz-26,0x6b7280);strip(1600,6,0,rz+26,0x6b7280)}
+ else{strip(1600,42,0,rz,0x2b2f33);dashes(true,rz-7);dashes(true,rz+7);strip(1600,1.6,0,rz-21.5,0xf8fafc);strip(1600,1.6,0,rz+21.5,0xf8fafc);strip(1600,10,0,rz+31,0x3f4a33)}
+ return g}
+function init3D(){
+ const wrap=document.getElementById('view3dWrap');
+ if(typeof THREE==='undefined'){document.getElementById('card3d').hidden=true;return}
+ document.getElementById('card3d').hidden=false;
+ if(T3.ok&&T3.renderer){T3.renderer.dispose()}
+ wrap.innerHTML='';
+ const W=wrap.clientWidth||800,H=wrap.clientHeight||500;
+ const scene=new THREE.Scene();scene.background=new THREE.Color(0xb8cfe5);scene.fog=new THREE.Fog(0xb8cfe5,500,1400);
+ const camera=new THREE.PerspectiveCamera(55,W/H,.5,4000);
+ const renderer=new THREE.WebGLRenderer({antialias:true,preserveDrawingBuffer:true});
+ renderer.setSize(W,H);renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+ renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+ wrap.appendChild(renderer.domElement);
+ scene.add(new THREE.HemisphereLight(0xeaf3ff,0x5a6648,.95));
+ const sun=new THREE.DirectionalLight(0xfff2dd,1.5);sun.position.set(140,200,80);sun.castShadow=true;
+ sun.shadow.mapSize.set(2048,2048);sun.shadow.camera.left=-220;sun.shadow.camera.right=220;sun.shadow.camera.top=220;sun.shadow.camera.bottom=-220;sun.shadow.camera.far=700;scene.add(sun);
+ const IM=simData.impact;let fx=0,fy=0;
+ if(IM&&IM.detected&&IM.point){fx=IM.point.x;fy=IM.point.y}
+ else{const tr=simData.trajectories[0].trajectory;const m=tr[Math.floor(tr.length/2)]||tr[0];if(m){fx=m.x;fy=m.y}}
+ scene.add(buildRoad((uploadData&&uploadData.environment)||'highway',{x:fx,y:fy}));
+ T3={ok:true,scene,camera,renderer,wrap,vehicles:[],focus:{x:fx,z:-fy},flash:null,ring:null,impactT:(IM&&IM.detected&&!IM.error)?IM.t:null,orbit:{th:.95,ph:.38,r:95},lastT:0};
+ simData.trajectories.forEach((t,i)=>{const mesh=buildVehicleMesh(t,i);scene.add(mesh);T3.vehicles.push({mesh,traj:t.trajectory})});
+ if(T3.impactT!=null){
+  const fl=new THREE.Mesh(new THREE.SphereGeometry(1,16,12),new THREE.MeshBasicMaterial({color:0xfde047,transparent:true,opacity:.95}));
+  fl.position.set(fx,4,-fy);fl.visible=false;scene.add(fl);T3.flash=fl;
+  const ring=new THREE.Mesh(new THREE.RingGeometry(.85,1,36),new THREE.MeshBasicMaterial({color:0xfbbf24,transparent:true,opacity:.9,side:THREE.DoubleSide}));
+  ring.rotation.x=-Math.PI/2;ring.position.set(fx,.2,-fy);ring.visible=false;scene.add(ring);T3.ring=ring}
+ const el=renderer.domElement;let drag=null;el.style.touchAction='none';
+ el.addEventListener('pointerdown',e=>{drag={x:e.clientX,y:e.clientY};el.setPointerCapture(e.pointerId)});
+ el.addEventListener('pointermove',e=>{if(!drag)return;T3.orbit.th-=(e.clientX-drag.x)*.006;T3.orbit.ph=Math.min(1.35,Math.max(.12,T3.orbit.ph+(e.clientY-drag.y)*.004));drag={x:e.clientX,y:e.clientY};if(document.getElementById('cam3d').value==='orbit')sync3D(T3.lastT)});
+ el.addEventListener('pointerup',()=>drag=null);
+ el.addEventListener('wheel',e=>{e.preventDefault();T3.orbit.r=Math.min(600,Math.max(25,T3.orbit.r*(1+e.deltaY*.001)));if(document.getElementById('cam3d').value==='orbit')sync3D(T3.lastT)},{passive:false});
+ document.getElementById('cam3d').onchange=()=>sync3D(T3.lastT);
+ sync3D(simMaxT()*((+document.getElementById('timeSlider').value||100)/100));
+}
+function tInterp(traj,T){if(!traj||!traj.length)return null;if(T<=traj[0].t)return traj[0];
+ for(let i=1;i<traj.length;i++){if(traj[i].t>=T){const a=traj[i-1],b=traj[i],f=(T-a.t)/((b.t-a.t)||1);
+  let dh=b.heading-a.heading;if(dh>180)dh-=360;if(dh<-180)dh+=360;
+  return{x:a.x+f*(b.x-a.x),y:a.y+f*(b.y-a.y),heading:a.heading+f*dh,speed_mph:(a.speed_mph||0)+f*((b.speed_mph||0)-(a.speed_mph||0))}}}
+ return traj[traj.length-1]}
+function placeCam(T){const c=T3.camera,mode=document.getElementById('cam3d').value,f=T3.focus;
+ if(mode==='top'){c.position.set(f.x,280,f.z+.01);c.lookAt(f.x,0,f.z)}
+ else if(mode==='impactcam'&&T3.impactT!=null){c.position.set(f.x+40,16,f.z+55);c.lookAt(f.x,3,f.z)}
+ else if(mode.indexOf('chase')===0){const v=T3.vehicles[+mode.slice(5)];
+  if(v){const p=tInterp(v.traj,T);if(p){const hr=p.heading*Math.PI/180;
+   c.position.set(p.x-Math.cos(hr)*55,22,-(p.y-Math.sin(hr)*55));c.lookAt(p.x,4,-p.y);return}}
+  c.position.set(f.x+60,30,f.z+60);c.lookAt(f.x,0,f.z)}
+ else{const o=T3.orbit;c.position.set(f.x+o.r*Math.cos(o.ph)*Math.cos(o.th),o.r*Math.sin(o.ph),f.z+o.r*Math.cos(o.ph)*Math.sin(o.th));c.lookAt(f.x,4,f.z)}}
+function sync3D(T){if(!T3.ok)return;T3.lastT=T;
+ T3.vehicles.forEach(v=>{const p=tInterp(v.traj,T);if(!p)return;
+  v.mesh.position.set(p.x,0,-p.y);v.mesh.rotation.y=p.heading*Math.PI/180});
+ if(T3.flash&&T3.impactT!=null){const dt=T-T3.impactT,on=dt>=0&&dt<.45;
+  T3.flash.visible=on;if(on){const sc=1+dt*42;T3.flash.scale.set(sc,sc,sc);T3.flash.material.opacity=.95*(1-dt/.45)}
+  if(T3.ring){const rv=dt>=0&&dt<1.2;T3.ring.visible=rv;if(rv){const rs=1+dt*58;T3.ring.scale.set(rs,rs,rs);T3.ring.material.opacity=.9*(1-dt/1.2)}}}
+ placeCam(T);T3.renderer.render(T3.scene,T3.camera)}
+let rec3d=null;
+function record3D(){
+ if(!T3.ok){toast('Run a simulation first','error');return}
+ if(rec3d){rec3d.stop=true;return}
+ let mr;const stream=T3.renderer.domElement.captureStream(30);
+ try{mr=new MediaRecorder(stream,{mimeType:'video/webm;codecs=vp9',videoBitsPerSecond:8e6})}
+ catch(e){try{mr=new MediaRecorder(stream,{mimeType:'video/webm'})}catch(e2){toast('Recording not supported in this browser','error');return}}
+ const chunks=[];mr.ondataavailable=e=>{if(e.data.size)chunks.push(e.data)};
+ mr.onstop=()=>{const blob=new Blob(chunks,{type:'video/webm'});const u=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=u;a.download='crashrecon_3d_reconstruction.webm';a.click();URL.revokeObjectURL(u);
+  document.getElementById('rec3dBtn').innerHTML='&#x1F534; Record Video';document.getElementById('rec3dStatus').textContent='Video saved (webm)';rec3d=null};
+ const maxT=simMaxT(),dur=maxT*1000,t0=performance.now();rec3d={stop:false};
+ document.getElementById('rec3dBtn').textContent='Stop';document.getElementById('rec3dStatus').textContent='Recording...';
+ stopPlayback();mr.start();
+ (function step(){const el2=performance.now()-t0,T=Math.min(maxT,el2/1000);
+  const sl=document.getElementById('timeSlider');sl.value=Math.round(T/maxT*100);drawTrajectories(T/maxT);
+  if(el2<dur+400&&!rec3d.stop){requestAnimationFrame(step)}else{mr.stop()}})()}
+
 </script>
 </body>
 </html>
